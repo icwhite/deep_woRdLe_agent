@@ -15,7 +15,7 @@ import time
 
 # Wordle Parameters 
 wordle_params = {'n_boards': 1, 
-                 'n_letters': 5, 
+                 'n_letters': 3,
                  'n_guesses': 6
                  }
 

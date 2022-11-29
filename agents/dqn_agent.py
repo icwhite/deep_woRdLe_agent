@@ -104,7 +104,8 @@ class DQNAgent:
             # Logging
             if iter % self.params['log_period'] == 0:
                 logs = {
-                    "Average Train Reward": np.mean(self.reward_buffer)
+                    "Average Train Reward": np.mean(self.reward_buffer),
+                    "Training Loss": loss
                 }
                 self.do_logging(logs, iter)
                 # print(f'\nIteration {iter}')
@@ -113,7 +114,8 @@ class DQNAgent:
                 # Compute some evaluation reward by running a new 100 games and computing the average reward
 
     def do_logging(self, logs, step):
+        print(f"Iteration: {step}")
         for key, value in logs.items():
-            print(f"Iteration: {step}")
             print('{} : {}'.format(key, value))
             self.logger.log_scalar(value, key, step)
+        print("\n")
