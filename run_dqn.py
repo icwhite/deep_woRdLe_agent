@@ -1,0 +1,56 @@
+# Dependencies 
+import torch
+from torch import nn
+import numpy as np
+import random
+
+from environments.wordle import Wordle
+from policies.mlp import MLPPolicy
+from utils.buffer import Buffer
+import utils.pytorch_utils as ptu
+from agents.dqn_agent import DQNAgent
+
+
+# Wordle Parameters 
+wordle_params = {'n_boards': 1, 
+                 'n_letters': 5, 
+                 'n_guesses': 6}
+
+# Network Parameters 
+network_params = {'n_layers': 2,
+                  'size': 32,
+                  'activation': nn.ReLU(),
+                  'output_activation': nn.Identity(),
+                  'lr': 5e-4,
+                  'batch_size': 32}
+
+# Buffer Parameters 
+buffer_params = {'replay_buffer_size': 50_000,
+                 'reward_buffer_size': 100,
+                 'min_replay_size': 1_000}
+
+# Exploration Parameters
+exploration_params = {'epsilon_start': 1.0,
+                      'epsilon_end': 0.02,
+                      'epsilon_decay': 10_000}
+
+# RL Parameters 
+rl_params = {'n_iter': 1_000_000,
+             'log_period': 1_000,
+             'gamma': 0.99,
+             'target_update_freq': 1_000}
+
+# Create environment 
+env = Wordle(**wordle_params)
+print(f'Playing Wordle with {env.n_boards} Boards, {env.n_letters} letters and {env.n_guesses} guesses.')
+print(f'There are {len(env.valid_words)} playable words in this configuration.')
+
+
+# Combine Parameters
+params = {k: v for d in [network_params, buffer_params, exploration_params, rl_params] for k, v in d.items()}
+
+# Construct agent 
+agent = DQNAgent(env, **params)
+agent.train_agent()
+
+
