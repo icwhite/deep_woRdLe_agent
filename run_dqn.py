@@ -9,6 +9,8 @@ from policies.mlp import MLPPolicy
 from utils.buffer import Buffer
 import utils.pytorch_utils as ptu
 from agents.dqn_agent import DQNAgent
+import os
+import time
 
 
 # Wordle Parameters 
@@ -45,6 +47,14 @@ rl_params = {'n_iter': 1_000_000,
              'target_update_freq': 1_000
              }
 
+data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
+
+logdir = f"dqn_wordle" + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
+
+logging_params = {
+    "logdir": os.path.join(data_path, logdir)
+}
+
 # Create environment 
 env = Wordle(**wordle_params)
 print(f'Playing Wordle with {env.n_boards} Boards, {env.n_letters} letters and {env.n_guesses} guesses.')
@@ -52,7 +62,7 @@ print(f'There are {len(env.valid_words)} playable words in this configuration.')
 
 
 # Combine Parameters
-params = {k: v for d in [network_params, buffer_params, exploration_params, rl_params] for k, v in d.items()}
+params = {k: v for d in [logging_params, network_params, buffer_params, exploration_params, rl_params] for k, v in d.items()}
 
 # Construct agent 
 agent = DQNAgent(env, **params)

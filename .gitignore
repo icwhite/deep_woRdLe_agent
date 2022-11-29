@@ -1,0 +1,5 @@
+*/__pycache__/*
+Users/*
+utils/__pycache__/*
+.idea/
+utils.egg-info

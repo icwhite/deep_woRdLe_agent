@@ -6,7 +6,7 @@ import random
 from policies.mlp import MLPPolicy
 from utils.buffer import Buffer
 import utils.pytorch_utils as ptu
-
+from utils.logger import Logger
 
 class DQNAgent: 
 
@@ -24,6 +24,8 @@ class DQNAgent:
 
         self.target_net.load_state_dict(self.online_net.state_dict())
         self.optimizer = torch.optim.Adam(self.online_net.parameters(), lr = params['lr'])
+
+        self.logger = Logger(self.params["logdir"])
 
 
         # Initialize replay buffers and fill
@@ -99,11 +101,19 @@ class DQNAgent:
             if iter % self.params['target_update_freq'] == 0: 
                 self.target_net.load_state_dict(self.online_net.state_dict())
 
-            # Logging 
-            if iter % self.params['log_period'] == 0: 
-                print(f'\nIteration {iter}')
-                print(f'Avgerage Train Reward: {np.mean(self.reward_buffer)}') 
+            # Logging
+            if iter % self.params['log_period'] == 0:
+                logs = {
+                    "Average Train Reward": np.mean(self.reward_buffer)
+                }
+                self.do_logging(logs, iter)
+                # print(f'\nIteration {iter}')
+                # print(f'Avgerage Train Reward: {np.mean(self.reward_buffer)}')
 
                 # Compute some evaluation reward by running a new 100 games and computing the average reward
 
-
+    def do_logging(self, logs, step):
+        for key, value in logs.items():
+            print(f"Iteration: {step}")
+            print('{} : {}'.format(key, value))
+            self.logger.log_scalar(value, key, step)
