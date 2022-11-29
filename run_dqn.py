@@ -14,7 +14,8 @@ from agents.dqn_agent import DQNAgent
 # Wordle Parameters 
 wordle_params = {'n_boards': 1, 
                  'n_letters': 5, 
-                 'n_guesses': 6}
+                 'n_guesses': 6
+                 }
 
 # Network Parameters 
 network_params = {'n_layers': 2,
@@ -22,23 +23,27 @@ network_params = {'n_layers': 2,
                   'activation': nn.ReLU(),
                   'output_activation': nn.Identity(),
                   'lr': 5e-4,
-                  'batch_size': 32}
+                  'batch_size': 32
+                  }
 
 # Buffer Parameters 
 buffer_params = {'replay_buffer_size': 50_000,
                  'reward_buffer_size': 100,
-                 'min_replay_size': 1_000}
+                 'min_replay_size': 1_000
+                 }
 
 # Exploration Parameters
 exploration_params = {'epsilon_start': 1.0,
                       'epsilon_end': 0.02,
-                      'epsilon_decay': 10_000}
+                      'epsilon_decay': 10_000
+                      }
 
 # RL Parameters 
 rl_params = {'n_iter': 1_000_000,
              'log_period': 1_000,
              'gamma': 0.99,
-             'target_update_freq': 1_000}
+             'target_update_freq': 1_000
+             }
 
 # Create environment 
 env = Wordle(**wordle_params)

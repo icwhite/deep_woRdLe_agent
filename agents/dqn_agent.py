@@ -82,12 +82,12 @@ class DQNAgent:
             
             # Compute targets
             next_q = self.target_net(next_obses_t)
-            target_q = next_q.max(dim = 1, keepdim = True)[0]
-            targets = rewards_t + self.params['gamma'] * (1 - dones_t) * target_q
+            target_q = (next_q.max(dim = 1, keepdim = True)[0]).squeeze(-1)
+            targets = rewards_t + self.params['gamma'] * (1 - dones_t) * target_q # 32, 32
 
             # Compute loss 
             current_q = self.online_net(obses_t)
-            action_q_values = torch.gather(input = current_q, dim = 1, index = actions_t)
+            action_q_values = torch.gather(input = current_q, dim = 1, index = actions_t).squeeze(-1) # 32,1
             loss = nn.functional.smooth_l1_loss(action_q_values, targets)
 
             # Step Optimizer 

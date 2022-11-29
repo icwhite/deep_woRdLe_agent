@@ -246,8 +246,8 @@ class Wordle(gym.Env):
 
         self.info = {'guess_count': self.guess_count, 
                      'boards_win': self.wins, 
-                     'board_guess_counts': self.board_guess_counts,
-                     'win': win}
+                     'board_guess_counts': self.board_guess_counts, 
+                     'win': win} 
 
         # Convert grids back to 1d state
         self.state = self._convert_grids_to_state(step_boards)
