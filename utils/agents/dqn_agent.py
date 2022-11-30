@@ -132,14 +132,15 @@ class DQNAgent:
 
             # Logging
             # log_period now refers to number of episodes
-            if new_episode and num_episodes % self.params['log_period'] == 0:
+            if new_episode and (num_episodes % self.params['log_period'] == 0):
                 average_eval_reward, std_eval_reward = self.evaluate_agent()
                 logs = {
                     "Average Train Reward": np.mean(self.reward_buffer),
                     "Std Train Reward": np.std(self.reward_buffer),
                     "Average Eval Reward": average_eval_reward,
                     "Std Eval Reward": std_eval_reward,
-                    "Training Loss": loss
+                    "Training Loss": loss, 
+                    "Epsilon": epsilon
                 }
                 self.do_logging(logs, num_episodes, iter)
     

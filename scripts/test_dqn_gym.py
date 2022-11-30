@@ -25,7 +25,7 @@ network_params = {'n_layers': 2,
                   }
 
 # Buffer Parameters 
-buffer_params = {'replay_buffer_size': 50_000,
+buffer_params = {'replay_buffer_size': 100_000,
                  'reward_buffer_size': 100,
                  'min_replay_size': 1_000
                  }
@@ -33,18 +33,18 @@ buffer_params = {'replay_buffer_size': 50_000,
 # Exploration Parameters
 exploration_params = {'epsilon_start': 1.0,
                       'epsilon_end': 0.02,
-                      'epsilon_decay': 10_000
+                      'epsilon_decay': 5_000
                       }
 
 # RL Parameters 
-rl_params = {'n_iter': 1_000_000,
-             'log_period': 1_000,
+rl_params = {'n_iter': 20_000,
+             'log_period': 1,
              'num_eval_episodes': 100,
              'gamma': 0.99,
              'target_update_freq': 1_000
              }
 
-data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data')
+data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
 
 logdir = f"dqn_cartpole" + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
 
