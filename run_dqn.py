@@ -32,7 +32,7 @@ wordle_params = {'n_boards': 1,
 
 # Network Parameters 
 network_params = {'n_layers': 2,
-                  'size': 32,
+                  'size': 128,
                   'activation': nn.ReLU(),
                   'output_activation': nn.Identity(),
                   'lr': 5e-4,
