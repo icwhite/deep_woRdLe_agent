@@ -4,9 +4,9 @@ from torch import nn
 import random
 
 from policies.mlp import MLPPolicy
-from utils.buffer import Buffer
-import utils.pytorch_utils as ptu
-from utils.logger import Logger
+from infrastructure.buffer import Buffer
+import infrastructure.pytorch_utils as ptu
+from infrastructure.logger import Logger
 
 
 class DQNAgent:
@@ -142,11 +142,7 @@ class DQNAgent:
                     "Training Loss": loss
                 }
                 self.do_logging(logs, num_episodes, iter)
-                # print(f'\nIteration {iter}')
-                # print(f'Avgerage Train Reward: {np.mean(self.reward_buffer)}')
-
-                # Compute some evaluation reward by running a new 100 games and computing the average reward
-
+    
     def do_logging(self, logs, num_episodes, step):
         print(f"Episode: {num_episodes}")
         print(f"Iteration: {step}")

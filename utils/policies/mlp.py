@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-import utils.pytorch_utils as ptu
+import infrastructure.pytorch_utils as ptu
 
 class MLPPolicy(nn.Module): 
 
