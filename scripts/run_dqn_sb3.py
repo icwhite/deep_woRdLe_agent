@@ -19,8 +19,8 @@ agent = sb3.DQN(policy = 'MlpPolicy',
                 train_freq = (100, 'episode'), 
                 gradient_steps = 1, 
                 target_update_interval = 10000, 
-                exploration_fraction = 0.1, 
+                exploration_fraction = 0.5, # this number x total timesteps is the the total decay period
                 exploration_initial_eps = 1.0, 
-                exploration_final_eps = 0.05, 
+                exploration_final_eps = 0.001, 
                 verbose = 1,)
 agent.learn(total_timesteps = 1_000_000, log_interval = 4) # remember total times steps is number of guesses NOT number of games
