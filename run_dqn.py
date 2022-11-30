@@ -43,6 +43,7 @@ exploration_params = {'epsilon_start': 1.0,
 # RL Parameters 
 rl_params = {'n_iter': 1_000_000,
              'log_period': 1_000,
+             'num_eval_episodes': 100,
              'gamma': 0.99,
              'target_update_freq': 1_000
              }
