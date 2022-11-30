@@ -12,14 +12,16 @@ class Wordle(gym.Env):
                  n_guesses: int = 6,
                  fixed_answer: bool = False,
                  answers: list = None, 
-                 seed: int = None): 
+                 seed: int = None, 
+                 keep_answers_on_reset: bool = True): 
         
         """
         n_boards: number of boards that are played at once
         n_letters: number of letters per word
         n_guesses: number of guesses per board
         answers: list of answers. If None then answers are selected at random
-        seed: seed for selecting random answers. If None then different answers will be selected each tiem
+        seed: seed for selecting random answers. If None then different answers will be selected each time
+        keep_answers_on_reset: whether we should select new answers on each reset.
         """
         
         
@@ -28,6 +30,7 @@ class Wordle(gym.Env):
         self.n_letters = n_letters
         self.n_guesses = n_guesses
         self.seed = seed 
+        self.keep_answers_on_reset = keep_answers_on_reset
         
         # Create the list of valid words of length n_letters
         self.valid_words = [word.lower() for word in english_words_set if len(word) == self.n_letters]
@@ -259,27 +262,23 @@ class Wordle(gym.Env):
 
         return self.state, reward, self.done, self.info
     
-    def reset(self, answers: list = None, seed = None, return_info = False):
+    def reset(self, seed = None, return_info = False):
         
         """
         Resets the environment
         
-        answers: if we want to pass in a list of answers on the reset. If none we will select random answers
         seed: random seed for selecting random answers. If none, the random answers won't be reproducible
         return_info: boolean for whether we should return the info from the last game
         """
     
-        # Create answers. We can pass in a list of answers but don't have to
-        if answers is not None: 
-            assert(isinstance(answers, list))
-            assert(len(answers) == self.n_boards)
-            assert([len(answer) == self.n_letters for answer in answers])
-            self.answers = answers
+        # Create answers. We can keep answers as well.
+        if self.keep_answers_on_reset:
+            self.answers = self.answers
+            self.encoded_answers = [self._encode(answer) for answer in self.answers]
         else: 
             self.answers = np.random.choice(self.valid_words, self.n_boards).tolist()
             self.encoded_answers = [self._encode(answer) for answer in self.answers]
-            
-            
+                        
         # Initialize State
         self.state = -1 * np.ones(self.obs_dims, dtype = int)
         

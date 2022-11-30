@@ -4,11 +4,11 @@ from torch import nn
 import numpy as np
 import random
 
-from environments.wordle import Wordle
-from policies.mlp import MLPPolicy
-from utils.buffer import Buffer
-import utils.pytorch_utils as ptu
-from agents.dqn_agent import DQNAgent
+from utils.environments.wordle import Wordle
+from utils.policies.mlp import MLPPolicy
+from utils.infrastructure.buffer import Buffer
+import utils.infrastructure.pytorch_utils as ptu
+from utils.agents.dqn_agent import DQNAgent
 import os
 import time
 

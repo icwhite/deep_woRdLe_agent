@@ -3,10 +3,10 @@ import torch
 from torch import nn
 import random
 
-from policies.mlp import MLPPolicy
-from utils.buffer import Buffer
-import utils.pytorch_utils as ptu
-from utils.logger import Logger
+from utils.policies.mlp import MLPPolicy
+from utils.infrastructure.buffer import Buffer
+import utils.infrastructure.pytorch_utils as ptu
+from utils.infrastructure.logger import Logger
 
 
 class DQNAgent:
@@ -15,7 +15,7 @@ class DQNAgent:
 
         # Grab attributes from environment
         self.env = env
-        obs_dim = np.prod(env.state.shape, dtype=int)
+        obs_dim = np.prod(env.observation_space.shape, dtype=int)
         ac_dim = env.action_space.n
         self.params = params
 
@@ -143,14 +143,11 @@ class DQNAgent:
                     "Std Train Reward": np.std(self.reward_buffer),
                     "Average Eval Reward": average_eval_reward,
                     "Std Eval Reward": std_eval_reward,
-                    "Training Loss": loss
+                    "Training Loss": loss, 
+                    "Epsilon": epsilon
                 }
                 self.do_logging(logs, num_episodes, iter)
-                # print(f'\nIteration {iter}')
-                # print(f'Avgerage Train Reward: {np.mean(self.reward_buffer)}')
-
-                # Compute some evaluation reward by running a new 100 games and computing the average reward
-
+    
     def do_logging(self, logs, num_episodes, step):
         print(f"Episode: {num_episodes}")
         print(f"Iteration: {step}")
