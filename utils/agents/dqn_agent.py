@@ -3,10 +3,10 @@ import torch
 from torch import nn
 import random
 
-from policies.mlp import MLPPolicy
-from infrastructure.buffer import Buffer
-import infrastructure.pytorch_utils as ptu
-from infrastructure.logger import Logger
+from utils.policies.mlp import MLPPolicy
+from utils.infrastructure.buffer import Buffer
+import utils.infrastructure.pytorch_utils as ptu
+from utils.infrastructure.logger import Logger
 
 
 class DQNAgent:
@@ -15,7 +15,7 @@ class DQNAgent:
 
         # Grab attributes from environment
         self.env = env
-        obs_dim = np.prod(env.state.shape, dtype=int)
+        obs_dim = np.prod(env.observation_space.shape, dtype=int)
         ac_dim = env.action_space.n
         self.params = params
 
