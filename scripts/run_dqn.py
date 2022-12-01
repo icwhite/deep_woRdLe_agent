@@ -35,12 +35,12 @@ network_params = {'n_layers': 2,
                   'size': 128,
                   'activation': nn.ReLU(),
                   'output_activation': nn.Identity(),
-                  'lr': 5e-4,
+                  'lr': 0.0003,
                   'batch_size': 32
                   }
 
 # Buffer Parameters 
-buffer_params = {'replay_buffer_size': 50_000,
+buffer_params = {'replay_buffer_size': 100_000,
                  'reward_buffer_size': 100,
                  'min_replay_size': 1_000
                  }
@@ -56,10 +56,10 @@ rl_params = {'n_iter': 1_000_000,
              'log_period': 1_000,
              'num_eval_episodes': 100,
              'gamma': 0.99,
-             'target_update_freq': 1_000
+             'target_update_freq': 10_000
              }
 
-data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
+data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data')
 logdir = params["exp_name"] + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
 
 logging_params = {
