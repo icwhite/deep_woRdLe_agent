@@ -9,7 +9,8 @@ class Wordle(gym.Env):
     def __init__(self, 
                  n_boards: int = 1, 
                  n_letters: int = 5,
-                 n_guesses: int = 6, 
+                 n_guesses: int = 6,
+                 fixed_answer: bool = False,
                  answers: list = None, 
                  seed: int = None, 
                  keep_answers_on_reset: bool = True): 
@@ -35,6 +36,9 @@ class Wordle(gym.Env):
         self.valid_words = [word.lower() for word in english_words_set if len(word) == self.n_letters]
         self.valid_words = [word for word in self.valid_words if "'" not in word and "." not in word and "&" not in word]
         self.valid_words = sorted(self.valid_words)
+
+        if fixed_answer:
+            self.answers = np.random.choice(self.valid_words, 1).tolist()
 
         
         # Create answers. If we pass a list it will set as answers. Otherwise it will generate a list 
@@ -116,7 +120,8 @@ class Wordle(gym.Env):
         max_score = 2 * self.n_letters
         reward = 1 if score == max_score else -1
         
-        return reward      
+        # return reward
+        return reward
 
     def update_single_board(self, 
                             board: dict, 

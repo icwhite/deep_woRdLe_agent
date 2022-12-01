@@ -12,16 +12,27 @@ from utils.agents.dqn_agent import DQNAgent
 import os
 import time
 
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--letters", type=int, default=5)
+parser.add_argument("--exp_name", type=str, default="dqn_wordle")
+parser.add_argument("--fixed_answer", action="store_true")
+
+args = parser.parse_args()
+params = vars(args)
+
 
 # Wordle Parameters 
 wordle_params = {'n_boards': 1, 
-                 'n_letters': 3,
-                 'n_guesses': 6
+                 'n_letters': params["letters"],
+                 'n_guesses': 6,
+                 'fixed_answer': params["fixed_answer"]
                  }
 
 # Network Parameters 
 network_params = {'n_layers': 2,
-                  'size': 32,
+                  'size': 128,
                   'activation': nn.ReLU(),
                   'output_activation': nn.Identity(),
                   'lr': 5e-4,
@@ -49,8 +60,7 @@ rl_params = {'n_iter': 1_000_000,
              }
 
 data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
-
-logdir = f"dqn_wordle" + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
+logdir = params["exp_name"] + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
 
 logging_params = {
     "logdir": os.path.join(data_path, logdir)

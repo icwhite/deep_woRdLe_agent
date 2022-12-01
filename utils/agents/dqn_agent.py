@@ -36,6 +36,8 @@ class DQNAgent:
         self.replay_buffer = self.buffer.replay_buffer
         self.reward_buffer = self.buffer.reward_buffer
 
+        self.gamma = self.params["gamma"]
+
     def evaluate_agent(self):
         num_episodes = 0
         eval_rewards = []
@@ -59,6 +61,7 @@ class DQNAgent:
         std_eval_reward = np.std(eval_rewards)
 
         return average_eval_reward, std_eval_reward
+
 
     def train_agent(self):
 
@@ -114,11 +117,11 @@ class DQNAgent:
             # Compute targets
             next_q = self.target_net(next_obses_t)
             target_q = (next_q.max(dim=1, keepdim=True)[0]).squeeze(-1)
-            targets = rewards_t + self.params['gamma'] * (1 - dones_t) * target_q  # 32, 32
+            targets = rewards_t + self.gamma * (1 - dones_t) * target_q
 
             # Compute loss 
             current_q = self.online_net(obses_t)
-            action_q_values = torch.gather(input=current_q, dim=1, index=actions_t).squeeze(-1)  # 32,1
+            action_q_values = torch.gather(input=current_q, dim=1, index=actions_t).squeeze(-1)
             loss = nn.functional.smooth_l1_loss(action_q_values, targets)
 
             # Step Optimizer 
@@ -128,11 +131,12 @@ class DQNAgent:
 
             # Update target network 
             if iter % self.params['target_update_freq'] == 0:
+                # should we be doing a soft update instead?
                 self.target_net.load_state_dict(self.online_net.state_dict())
 
             # Logging
             # log_period now refers to number of episodes
-            if new_episode and (num_episodes % self.params['log_period'] == 0):
+            if iter % self.params['log_period'] == 0:
                 average_eval_reward, std_eval_reward = self.evaluate_agent()
                 logs = {
                     "Average Train Reward": np.mean(self.reward_buffer),
