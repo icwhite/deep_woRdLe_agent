@@ -15,7 +15,7 @@ data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data')
 logdir = "stable_baseline_ppo" + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
 logging = os.path.join(data_path, logdir)
 
-# Run DQN: Link to docs (https://stable-baselines3.readthedocs.io/en/master/modules/dqn.html)
+# Run DQN: Link to docs (https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html)
 agent = sb3.PPO(policy = 'MlpPolicy',
                 env = env, 
                 learning_rate = 0.0003, 
