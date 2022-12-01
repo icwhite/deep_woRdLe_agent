@@ -22,5 +22,6 @@ stable-baselines3==1.6.2
 tomli==2.0.1
 torch==1.13.0
 typing_extensions==4.4.0
--e git+https://github.com/icwhite/cs285_final_project.git@86a6fcb9655b63c9b7a59e2f941f696e7785142d#egg=utils
 zipp==3.11.0
+tensorboard==2.10.0
+tensorboardX==2.5.1
