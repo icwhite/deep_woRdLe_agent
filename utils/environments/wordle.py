@@ -76,6 +76,9 @@ class Wordle(gym.Env):
         self.wins = [False] * self.n_boards # tracks which boards have been won already
         self.done = False # overall is the game done
         self.board_guess_counts = [self.guess_count] * self.n_boards # guess count for each board
+        self.green_letters = [] # letters that we know are green
+        self.yellow_letters = [] # letters that are yellow (runs into case of guessing the same letter in two spots and it's yellow both times)
+        # but we'll ignore for now
         
     def _encode(self, word: str): 
         """
@@ -111,7 +114,7 @@ class Wordle(gym.Env):
         """
         
         return np.array([np.append(board['letters'], board['colors']) for board in boards], dtype=int).flatten()
-        
+       
     def compute_single_board_reward(self, board: dict, board_guess_count: int): 
         
         """
@@ -120,12 +123,36 @@ class Wordle(gym.Env):
         
         board: dict of form {'letters': [...], 'colors': [...]}
         """
-        score = np.sum(board['colors'][board_guess_count])
-        max_score = 2 * self.n_letters
-        reward = 1 if score == max_score else -1
+
         
-        # return reward
-        return reward, score == max_score
+        # score = np.sum(board['colors'][board_guess_count])
+        # max_score = 2 * self.n_letters
+        # reward = 1 if score == max_score else -1
+        
+        # # return reward
+        # return reward, score == max_score
+
+
+        # Grab the letters and colors
+        guess_letters, guess_colors = board['letters'][board_guess_count], board['colors'][board_guess_count]
+
+        # Compute information gain 
+        score = 0
+        for letter, color in zip(guess_letters, guess_colors): 
+            # green scores
+            if (color == 2) and (letter not in self.green_letters):
+                score += 2
+            elif (color == 1) and (letter not in self.yellow_letters):
+                score += 1  
+            else: 
+                score -= 1
+
+        # Check if won board 
+        won = np.sum(guess_colors) == 2 * self.n_letters
+        if not won: 
+            score -= 10
+
+        return score, won
 
     def update_single_board(self, 
                             board: dict, 
@@ -175,10 +202,14 @@ class Wordle(gym.Env):
                 # Green letter (i.e. correct letter in correct spot)
                 if guess_letter == answer_letters: 
                     new_colors.append(2)
+                    if guess_letter not in self.green_letters: 
+                        self.green_letters.append(guess_letter)
 
                 # Yellow letter (i.e. correct letter in incorrect spot)
                 elif guess_letter in encoded_answer: 
                     new_colors.append(1)
+                    if guess_letter not in self.green_letters: 
+                        self.yellow_letters.append(guess_letter)
 
                 # Gray letter (i.e. incorrect letter)
                 else: 
@@ -191,9 +222,6 @@ class Wordle(gym.Env):
             # Compute board reward 
             board_reward, board_win = self.compute_single_board_reward(board, board_guess_count)
 
-
-            # # Check if we've won this board now
-            # board_win = board_reward > 0
             
             # Increment guess count on that board
             board_guess_count += 1
