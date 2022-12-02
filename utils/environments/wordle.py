@@ -10,10 +10,11 @@ class Wordle(gym.Env):
                  n_boards: int = 1, 
                  n_letters: int = 5,
                  n_guesses: int = 6,
-                 fixed_answer: bool = False,
-                 answers: list = None, 
-                 seed: int = None, 
-                 keep_answers_on_reset: bool = True): 
+                 answers: list = None,
+                 subset_valid_words: int = 0,
+                 subset_answers: int = 0,
+                 seed: int = None,
+                 keep_answers_on_reset: bool = False):
         
         """
         n_boards: number of boards that are played at once
@@ -37,9 +38,12 @@ class Wordle(gym.Env):
         self.valid_words = [word for word in self.valid_words if "'" not in word and "." not in word and "&" not in word]
         self.valid_words = sorted(self.valid_words)
 
-        if fixed_answer:
-            self.answers = np.random.choice(self.valid_words, 1).tolist()
-
+        if subset_valid_words:
+            self.valid_words = np.random.choice(self.valid_words, subset_valid_words).tolist()
+        if subset_answers:
+            self.valid_answers = np.random.choice(self.valid_words, subset_answers).tolist()
+        else:
+            self.valid_answers = self.valid_words
         
         # Create answers. If we pass a list it will set as answers. Otherwise it will generate a list 
         # of size n_boards of random answers. 
@@ -121,7 +125,7 @@ class Wordle(gym.Env):
         reward = 1 if score == max_score else -1
         
         # return reward
-        return reward
+        return reward, score == max_score
 
     def update_single_board(self, 
                             board: dict, 
@@ -185,11 +189,11 @@ class Wordle(gym.Env):
 
 
             # Compute board reward 
-            board_reward = self.compute_single_board_reward(board, board_guess_count)
+            board_reward, board_win = self.compute_single_board_reward(board, board_guess_count)
 
 
-            # Check if we've won this board now
-            board_win = board_reward > 0
+            # # Check if we've won this board now
+            # board_win = board_reward > 0
             
             # Increment guess count on that board
             board_guess_count += 1
@@ -276,7 +280,7 @@ class Wordle(gym.Env):
             self.answers = self.answers
             self.encoded_answers = [self._encode(answer) for answer in self.answers]
         else: 
-            self.answers = np.random.choice(self.valid_words, self.n_boards).tolist()
+            self.answers = np.random.choice(self.valid_answers, self.n_boards).tolist()
             self.encoded_answers = [self._encode(answer) for answer in self.answers]
                         
         # Initialize State
