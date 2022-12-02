@@ -149,6 +149,8 @@ class Wordle(gym.Env):
 
         # Check if won board 
         won = np.sum(guess_colors) == 2 * self.n_letters
+        if not won: 
+            score -= 10
 
         return score, won
 
