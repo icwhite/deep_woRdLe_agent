@@ -319,6 +319,10 @@ class Wordle(gym.Env):
         self.wins = [False] * self.n_boards # tracks which boards have been won already
         self.done = False # overall is the game done
         self.board_guess_counts = [self.guess_count] * self.n_boards # guess count for each board
+
+        # reset green and yellow trackers
+        self.green_letters = []
+        self.yellow_letters = []
         
     
         if return_info:
