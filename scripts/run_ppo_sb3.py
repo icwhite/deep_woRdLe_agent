@@ -13,7 +13,7 @@ args = parser.parse_args()
 params = vars(args)
 
 # Get wordle words
-wordle_words = open("/Users/bennettcohen/Desktop/projects/wordle/scripts/wordle_words.txt", "r").read().split(",")
+wordle_words = open("scripts/wordle_words.txt", "r").read().split(",")
 wordle_words = [word.replace('\n', '') for word in wordle_words]
 
 # Create Environment 
