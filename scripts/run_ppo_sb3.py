@@ -8,6 +8,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--exp_name", type=str, default="dqn_wordle")
 parser.add_argument("--subset_valid_words", type=int, default=False)
 parser.add_argument("--subset_answers", type=int, default=False)
+parser.add_argument("--learning_rate", '-lr', type=float, default = 0.0003)
+
 
 args = parser.parse_args()
 params = vars(args)
@@ -33,7 +35,7 @@ logging = os.path.join(data_path, logdir)
 # Run DQN: Link to docs (https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html)
 agent = sb3.PPO(policy = 'MlpPolicy',
                 env = env, 
-                learning_rate = 0.0003, 
+                learning_rate = params['learning_rate'], 
                 n_steps = 2048, 
                 batch_size = 64, 
                 n_epochs = 10, 
@@ -43,3 +45,4 @@ agent = sb3.PPO(policy = 'MlpPolicy',
                 verbose = 1,
                 tensorboard_log=logging)
 agent.learn(total_timesteps = 1_000_000, log_interval = 4) # remember total times steps is number of guesses NOT number of games
+agent.save('ppo_lr_0.003')

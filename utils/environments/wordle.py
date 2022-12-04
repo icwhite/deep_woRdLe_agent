@@ -203,6 +203,9 @@ class Wordle(gym.Env):
             reward = 1
         else: 
             board_win = False
+
+        # if (self.guess_count == self.n_guesses) and not board_win: 
+        #   reward -= 10
             
         return reward, board_win
    
