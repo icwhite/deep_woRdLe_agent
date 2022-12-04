@@ -6,11 +6,15 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--exp_name", type=str, default="dqn_wordle")
-parser.add_argument("--subset_valid_words", type=int, default=0)
-parser.add_argument("--subset_answers", type=int, default=0)
+parser.add_argument("--subset_valid_words", type=int, default=False)
+parser.add_argument("--subset_answers", type=int, default=False)
 
 args = parser.parse_args()
 params = vars(args)
+
+# Get wordle words
+wordle_words = open("/Users/bennettcohen/Desktop/projects/wordle/scripts/wordle_words.txt", "r").read().split(",")
+wordle_words = [word.replace('\n', '') for word in wordle_words]
 
 # Create Environment 
 env = Wordle(n_boards=1,
@@ -18,7 +22,8 @@ env = Wordle(n_boards=1,
              n_guesses=6,
              subset_valid_words=params["subset_valid_words"],
              subset_answers=params["subset_answers"],
-             keep_answers_on_reset=False)
+             keep_answers_on_reset=False, 
+             valid_words = wordle_words)
 
 data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data')
 # data_path = "Users/isado/cs285/cs285_final_project/data/"
