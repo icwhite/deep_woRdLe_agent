@@ -195,9 +195,9 @@ class Wordle(gym.Env):
         self.possible_words = new_possible_words
             
         # Check if the board won
-        if decoded_guess == decoded_answer: 
+        if decoded_guess == decoded_answer or len(new_possible_words) == 1:
             board_win = True
-            reward = 500000
+            reward = 1
         else: 
             board_win = False
             
