@@ -20,7 +20,8 @@ class Wordle(gym.Env):
                  subset_answers: int = 0,
                  seed: int = None,
                  keep_answers_on_reset: bool = False,
-                 exploration_model: BaseExplorationModel = BaseExplorationModel):
+                 exploration_model: BaseExplorationModel = BaseExplorationModel(),
+                 valid_words: list = None):
         
         """
         n_boards: number of boards that are played at once
@@ -37,11 +38,12 @@ class Wordle(gym.Env):
         self.n_letters = n_letters
         self.n_guesses = n_guesses
         self.seed = seed 
+        np.random.seed(self.seed)
         self.keep_answers_on_reset = keep_answers_on_reset
         self.exploration_model = exploration_model
         
         # Create the list of valid words of length n_letters
-        self.valid_words = [word.lower() for word in english_words_set if len(word) == self.n_letters]
+        self.valid_words = valid_words if valid_words is not None else [word.lower() for word in english_words_set if len(word) == self.n_letters]
         self.valid_words = [word for word in self.valid_words if "'" not in word and "." not in word and "&" not in word]
         self.valid_words = sorted(self.valid_words)
 
@@ -51,6 +53,7 @@ class Wordle(gym.Env):
             self.valid_answers = np.random.choice(self.valid_words, subset_answers).tolist()
         else:
             self.valid_answers = self.valid_words
+
         
         # Create answers. If we pass a list it will set as answers. Otherwise it will generate a list 
         # of size n_boards of random answers. 
@@ -61,7 +64,7 @@ class Wordle(gym.Env):
             assert([len(answer) == self.n_letters for answer in answers])
             self.answers = answers
         else: 
-            self.answers = np.random.choice(self.valid_words, self.n_boards).tolist()
+            self.answers = np.random.choice(self.valid_answers, self.n_boards).tolist()
             
         self.encoded_answers = [self._encode(answer) for answer in self.answers]
             

@@ -14,6 +14,9 @@ parser.add_argument("--subset_answers", type=int, default=0)
 args = parser.parse_args()
 params = vars(args)
 
+wordle_words = open("scripts/wordle_words.txt", "r").read().split(",")
+wordle_words = [word.replace('\n', '') for word in wordle_words]
+
 # Create Environment
 env = Wordle(n_boards=1,
              n_letters=5,
@@ -21,7 +24,8 @@ env = Wordle(n_boards=1,
              subset_valid_words=params["subset_valid_words"],
              subset_answers=params["subset_answers"],
              keep_answers_on_reset=False,
-             exploration_model= CountExploreModel())
+             exploration_model= CountExploreModel(),
+             valid_words=wordle_words)
 
 data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data')
 # data_path = "Users/isado/cs285/cs285_final_project/data/"
