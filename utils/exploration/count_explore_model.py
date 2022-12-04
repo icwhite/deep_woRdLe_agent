@@ -5,7 +5,7 @@ class CountExploreModel(BaseExplorationModel):
         super().__init__()
         self.words_tried = []
 
-    def compute_bonus(self, board: dict, action):
+    def compute_bonus(self, state, action):
         if action in self.words_tried:
             return -2
         else:

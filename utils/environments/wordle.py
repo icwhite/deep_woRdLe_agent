@@ -65,7 +65,11 @@ class Wordle(gym.Env):
             self.answers = answers
         else: 
             self.answers = np.random.choice(self.valid_answers, self.n_boards).tolist()
-            
+
+        # create encoder and decoder for later use in self._encode and self._decode
+        self.encoder = dict(zip(list("abcdefghijklmnopqrstuvwxyz"), np.arange(26)))
+        self.decoder = dict(zip(np.arange(26), list("abcdefghijklmnopqrstuvwxyz")))
+
         self.encoded_answers = [self._encode(answer) for answer in self.answers]
             
             
@@ -90,8 +94,7 @@ class Wordle(gym.Env):
         self.yellow_letters = [] # letters that are yellow (runs into case of guessing the same letter in two spots and it's yellow both times)
         # but we'll ignore for now
 
-        self.encoder = dict(zip(list("abcdefghijklmnopqrstuvwxyz"), np.arange(26)))
-        self.decoder = dict(zip(np.arange(26), list("abcdefghijklmnopqrstuvwxyz")))
+
         
         self.possible_words = self.valid_words
         self.alphabet = ['a', 'b', 'c' , 'd', 'e', 'f', 'g', 'h', 'i', 
@@ -359,7 +362,7 @@ class Wordle(gym.Env):
     def compute_bonus(self, state, action):
         decoded_action = self.valid_words[action]
         encoded_action = self._encode(decoded_action)
-        return self.exploration_model(state, encoded_action)
+        return self.exploration_model.compute_bonus(state, encoded_action)
     
     def reset(self, seed = None, return_info = False):
         
