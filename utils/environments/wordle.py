@@ -369,8 +369,7 @@ class Wordle(gym.Env):
 
     def compute_bonus(self, state, action):
         decoded_action = self.valid_words[action]
-        encoded_action = self._encode(decoded_action)
-        return self.exploration_model.compute_bonus(state, encoded_action)
+        return self.exploration_model.compute_bonus(state, decoded_action)
     
     def reset(self, seed = None, return_info = False):
         
