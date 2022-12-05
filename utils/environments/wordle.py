@@ -51,6 +51,8 @@ class Wordle(gym.Env):
         self.valid_words = [word for word in self.valid_words if "'" not in word and "." not in word and "&" not in word]
         self.valid_words = sorted(self.valid_words)
 
+        self.sparse_reward = False
+
         if subset_valid_words:
             self.valid_words = np.random.choice(self.valid_words, subset_valid_words).tolist()
         if subset_answers:
@@ -145,6 +147,24 @@ class Wordle(gym.Env):
         """
         
         return np.array([np.append(board['letters'], board['colors']) for board in boards], dtype=int).flatten()
+
+    def compute_single_board_sparse_reward(self, board: dict, board_guess_count: int):
+
+
+        """
+        Because green is 2, the max score is 2 x number of letters
+        We give a score of -1 for any bad guessses
+
+        board: dict of form {'letters': [...], 'colors': [...]}
+        """
+
+
+        score = np.sum(board['colors'][board_guess_count])
+        max_score = 2 * self.n_letters
+        reward = 1 if score == max_score else -1
+
+        # return reward
+        return reward
        
     def compute_single_board_reward(self, board: dict, board_guess_count: int, decoded_answer: str, 
                                     decoded_guess: str): 
@@ -265,7 +285,10 @@ class Wordle(gym.Env):
 
             # Compute board reward 
             decoded_answer = self._decode(encoded_answer)
-            board_reward = self.compute_single_board_reward(board, board_guess_count,
+            if self.sparse_reward:
+                board_reward = self.compute_single_board_sparse_reward(board, board_guess_count)
+            else:
+                board_reward = self.compute_single_board_reward(board, board_guess_count,
                                                                        decoded_answer, decoded_action)
 
             board_win = len(self.possible_words) == 1 or decoded_answer == decoded_action

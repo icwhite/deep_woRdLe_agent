@@ -9,6 +9,7 @@ parser.add_argument("--exp_name", type=str, default="dqn_wordle")
 parser.add_argument("--subset_valid_words", type=int, default=False)
 parser.add_argument("--subset_answers", type=int, default=False)
 parser.add_argument("--learning_rate", '-lr', type=float, default = 0.0003)
+parser.add_argument("--timesteps", type=int, default= 1_000_000)
 
 
 args = parser.parse_args()
@@ -47,5 +48,5 @@ agent = sb3.PPO(policy = 'MlpPolicy',
                 clip_range = 0.2, 
                 verbose = 1,
                 tensorboard_log=logging)
-agent.learn(total_timesteps = 1_000_000, log_interval = 4) # remember total times steps is number of guesses NOT number of games
-agent.save('ppo_lr_0.003')
+agent.learn(total_timesteps = params["timesteps"], log_interval = 4) # remember total times steps is number of guesses NOT number of games
+agent.save('ppo_lr_0.0003_2mill')
