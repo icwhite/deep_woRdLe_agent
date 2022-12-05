@@ -1,3 +1,3 @@
 class BaseExplorationModel(object):
-    def compute_bonus(self, board, action):
+    def compute_bonus(self, state, action):
         return 0

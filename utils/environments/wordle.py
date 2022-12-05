@@ -4,6 +4,8 @@ import gym
 from gym import spaces
 from utils.exploration.base_exploration_model import BaseExplorationModel
 from gym.utils.env_checker import check_env
+from collections import deque
+from utils.infrastructure.logger import Logger
 
 
 from collections import defaultdict
@@ -21,7 +23,9 @@ class Wordle(gym.Env):
                  seed: int = None,
                  keep_answers_on_reset: bool = False,
                  exploration_model: BaseExplorationModel = BaseExplorationModel(),
-                 valid_words: list = None):
+                 valid_words: list = None,
+                 logdir: str = None,
+                 logging_freq: int = 500):
         
         """
         n_boards: number of boards that are played at once
@@ -47,6 +51,8 @@ class Wordle(gym.Env):
         self.valid_words = [word for word in self.valid_words if "'" not in word and "." not in word and "&" not in word]
         self.valid_words = sorted(self.valid_words)
 
+        self.sparse_reward = False
+
         if subset_valid_words:
             self.valid_words = np.random.choice(self.valid_words, subset_valid_words).tolist()
         if subset_answers:
@@ -65,7 +71,11 @@ class Wordle(gym.Env):
             self.answers = answers
         else: 
             self.answers = np.random.choice(self.valid_answers, self.n_boards).tolist()
-            
+
+        # create encoder and decoder for later use in self._encode and self._decode
+        self.encoder = dict(zip(list("abcdefghijklmnopqrstuvwxyz"), np.arange(26)))
+        self.decoder = dict(zip(np.arange(26), list("abcdefghijklmnopqrstuvwxyz")))
+
         self.encoded_answers = [self._encode(answer) for answer in self.answers]
             
             
@@ -90,9 +100,12 @@ class Wordle(gym.Env):
         self.yellow_letters = [] # letters that are yellow (runs into case of guessing the same letter in two spots and it's yellow both times)
         # but we'll ignore for now
 
-        self.encoder = dict(zip(list("abcdefghijklmnopqrstuvwxyz"), np.arange(26)))
-        self.decoder = dict(zip(np.arange(26), list("abcdefghijklmnopqrstuvwxyz")))
-        
+        # logging
+        self.logging_freq = logging_freq
+        self.victory_buffer = deque(maxlen= self.logging_freq)
+        self.logger = Logger(logdir)
+        self.num_games = 0
+
         self.possible_words = self.valid_words
         self.alphabet = ['a', 'b', 'c' , 'd', 'e', 'f', 'g', 'h', 'i', 
             'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
@@ -134,6 +147,24 @@ class Wordle(gym.Env):
         """
         
         return np.array([np.append(board['letters'], board['colors']) for board in boards], dtype=int).flatten()
+
+    def compute_single_board_sparse_reward(self, board: dict, board_guess_count: int):
+
+
+        """
+        Because green is 2, the max score is 2 x number of letters
+        We give a score of -1 for any bad guessses
+
+        board: dict of form {'letters': [...], 'colors': [...]}
+        """
+
+
+        score = np.sum(board['colors'][board_guess_count])
+        max_score = 2 * self.n_letters
+        reward = 1 if score == max_score else -1
+
+        # return reward
+        return reward
        
     def compute_single_board_reward(self, board: dict, board_guess_count: int, decoded_answer: str, 
                                     decoded_guess: str): 
@@ -202,7 +233,7 @@ class Wordle(gym.Env):
         self.possible_words = new_possible_words
             
         # Check if the board won
-        if decoded_guess == decoded_answer or len(new_possible_words) == 1:
+        if decoded_guess == decoded_answer or (len(new_possible_words) == 1 and board_guess_count < 6):
             reward = 1
             
         return reward
@@ -254,7 +285,10 @@ class Wordle(gym.Env):
 
             # Compute board reward 
             decoded_answer = self._decode(encoded_answer)
-            board_reward = self.compute_single_board_reward(board, board_guess_count,
+            if self.sparse_reward:
+                board_reward = self.compute_single_board_sparse_reward(board, board_guess_count)
+            else:
+                board_reward = self.compute_single_board_reward(board, board_guess_count,
                                                                        decoded_answer, decoded_action)
 
             board_win = len(self.possible_words) == 1 or decoded_answer == decoded_action
@@ -358,8 +392,7 @@ class Wordle(gym.Env):
 
     def compute_bonus(self, state, action):
         decoded_action = self.valid_words[action]
-        encoded_action = self._encode(decoded_action)
-        return self.exploration_model(state, encoded_action)
+        return self.exploration_model.compute_bonus(state, decoded_action)
     
     def reset(self, seed = None, return_info = False):
         
@@ -369,6 +402,15 @@ class Wordle(gym.Env):
         seed: random seed for selecting random answers. If none, the random answers won't be reproducible
         return_info: boolean for whether we should return the info from the last game
         """
+
+        # log whether we won or not to victory buffer
+        self.victory_buffer.append(np.all(self.wins))
+        self.num_games += 1
+        if not self.num_games % self.logging_freq:
+            logs = {
+                "win ratio": self._win_ratio()
+            }
+            self.do_logging(logs, self.num_games)
     
         # Create answers. We can keep answers as well.
         if self.keep_answers_on_reset:
@@ -400,6 +442,17 @@ class Wordle(gym.Env):
             return self.state, self.info
                         
         return self.state
+
+    def _win_ratio(self):
+        wins = sum(self.victory_buffer)
+        return wins/len(self.victory_buffer)
+
+    def do_logging(self, logs, num_games):
+        print(f"Number of Games: {num_games}")
+        for key, value in logs.items():
+            print('{} : {}'.format(key, value))
+            self.logger.log_scalar(value, key, num_games)
+        print("\n")
 
 # class Wordle(gym.Env): 
     
