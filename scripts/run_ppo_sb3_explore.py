@@ -17,6 +17,13 @@ params = vars(args)
 wordle_words = open("scripts/wordle_words.txt", "r").read().split(",")
 wordle_words = [word.replace('\n', '') for word in wordle_words]
 
+
+
+data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data')
+# data_path = "Users/isado/cs285/cs285_final_project/data/"
+logdir = "ppo" + "_" + params["exp_name"] + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
+logging = os.path.join(data_path, logdir)
+
 # Create Environment
 env = Wordle(n_boards=1,
              n_letters=5,
@@ -25,12 +32,8 @@ env = Wordle(n_boards=1,
              subset_answers=params["subset_answers"],
              keep_answers_on_reset=False,
              exploration_model= CountExploreModel(),
-             valid_words=wordle_words)
-
-data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data')
-# data_path = "Users/isado/cs285/cs285_final_project/data/"
-logdir = "stable_baseline_ppo" + "_" + params["exp_name"] + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
-logging = os.path.join(data_path, logdir)
+             valid_words=wordle_words,
+             logdir=os.path.join(logging, "win_logs"))
 
 # Run DQN: Link to docs (https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html)
 agent = sb3.PPO(policy = 'MlpPolicy',

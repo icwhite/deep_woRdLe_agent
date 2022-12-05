@@ -4,6 +4,8 @@ import gym
 from gym import spaces
 from utils.exploration.base_exploration_model import BaseExplorationModel
 from gym.utils.env_checker import check_env
+from collections import deque
+from utils.infrastructure.logger import Logger
 
 
 from collections import defaultdict
@@ -21,7 +23,9 @@ class Wordle(gym.Env):
                  seed: int = None,
                  keep_answers_on_reset: bool = False,
                  exploration_model: BaseExplorationModel = BaseExplorationModel(),
-                 valid_words: list = None):
+                 valid_words: list = None,
+                 logdir: str = None,
+                 logging_freq: int = 500):
         
         """
         n_boards: number of boards that are played at once
@@ -94,8 +98,12 @@ class Wordle(gym.Env):
         self.yellow_letters = [] # letters that are yellow (runs into case of guessing the same letter in two spots and it's yellow both times)
         # but we'll ignore for now
 
+        # logging
+        self.logging_freq = logging_freq
+        self.victory_buffer = deque(maxlen= self.logging_freq)
+        self.logger = Logger(logdir)
+        self.num_games = 0
 
-        
         self.possible_words = self.valid_words
         self.alphabet = ['a', 'b', 'c' , 'd', 'e', 'f', 'g', 'h', 'i', 
             'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
@@ -205,7 +213,7 @@ class Wordle(gym.Env):
         self.possible_words = new_possible_words
             
         # Check if the board won
-        if decoded_guess == decoded_answer or len(new_possible_words) == 1:
+        if decoded_guess == decoded_answer or (len(new_possible_words) == 1 and board_guess_count < 6):
             reward = 1
             
         return reward
@@ -372,6 +380,15 @@ class Wordle(gym.Env):
         seed: random seed for selecting random answers. If none, the random answers won't be reproducible
         return_info: boolean for whether we should return the info from the last game
         """
+
+        # log whether we won or not to victory buffer
+        self.victory_buffer.append(np.all(self.wins))
+        self.num_games += 1
+        if not self.num_games % self.logging_freq:
+            logs = {
+                "win ratio": self._win_ratio()
+            }
+            self.do_logging(logs, self.num_games)
     
         # Create answers. We can keep answers as well.
         if self.keep_answers_on_reset:
@@ -403,6 +420,17 @@ class Wordle(gym.Env):
             return self.state, self.info
                         
         return self.state
+
+    def _win_ratio(self):
+        wins = sum(self.victory_buffer)
+        return wins/len(self.victory_buffer)
+
+    def do_logging(self, logs, num_games):
+        print(f"Number of Games: {num_games}")
+        for key, value in logs.items():
+            print('{} : {}'.format(key, value))
+            self.logger.log_scalar(value, key, num_games)
+        print("\n")
 
 # class Wordle(gym.Env): 
     
