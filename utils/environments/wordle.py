@@ -20,7 +20,7 @@ class Wordle(gym.Env):
                  answers: list = None,
                  subset_valid_words: int = 0,
                  subset_answers: int = 0,
-                 seed: int = None,
+                 seed: int = 0,
                  keep_answers_on_reset: bool = False,
                  exploration_model: BaseExplorationModel = BaseExplorationModel(),
                  valid_words: list = None,
@@ -52,6 +52,8 @@ class Wordle(gym.Env):
         self.valid_words = sorted(self.valid_words)
 
         self.sparse_reward = False
+        self.explore_weight = 0.4
+        self.exploit_weight = 0.6
 
         if subset_valid_words:
             self.valid_words = np.random.choice(self.valid_words, subset_valid_words).tolist()
@@ -386,7 +388,7 @@ class Wordle(gym.Env):
 
         exploration_bonus = self.compute_bonus(self.state, action)
 
-        reward = exploration_bonus + reward
+        reward = self.explore_weight * exploration_bonus + self.exploit_weight * reward
 
         return self.state, reward, self.done, self.info
 
