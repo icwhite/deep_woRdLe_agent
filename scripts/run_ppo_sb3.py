@@ -10,6 +10,7 @@ parser.add_argument("--subset_valid_words", type=int, default=False)
 parser.add_argument("--subset_answers", type=int, default=False)
 parser.add_argument("--learning_rate", '-lr', type=float, default = 0.0003)
 parser.add_argument("--timesteps", type=int, default= 1_000_000)
+parser.add_argument("--reward", type=str, default="elimination")
 
 
 args = parser.parse_args()
@@ -32,7 +33,8 @@ env = Wordle(n_boards=1,
              subset_answers=params["subset_answers"],
              keep_answers_on_reset=False, 
              valid_words = wordle_words,
-             logdir=os.path.join(logging, "win_logs"))
+             logdir=os.path.join(logging, "win_logs"),
+             reward=params["reward"])
 
 
 
