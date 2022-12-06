@@ -69,6 +69,9 @@ class Wordle(gym.Env):
         # self.explore_weight_schedule = explore_weight_schedule
         # self.exploit_weight_schedule = exploit_weight_schedule
 
+        self.explore_weight = 0
+        self.exploit_weight = 1
+
         if subset_valid_words:
             self.valid_words = np.random.choice(self.valid_words, subset_valid_words).tolist()
         if subset_answers:
@@ -279,13 +282,15 @@ class Wordle(gym.Env):
 
 
         # Compute reward 
-        reward = (len(self.possible_words) - len(new_possible_words))/len(self.possible_words) - 1
+        reward = (len(self.possible_words) - len(new_possible_words))/len(self.possible_words)
         # print(f'Reduced words from {len(self.possible_words)} to {len(new_possible_words)}')
         self.possible_words = new_possible_words
             
         # Check if the board won
         if decoded_guess == decoded_answer or (len(new_possible_words) == 1 and board_guess_count < 6):
-            reward = 1
+            reward += 1
+        if decoded_guess != decoded_answer:
+            reward = reward - board_guess_count
             
         return reward
    
@@ -445,14 +450,14 @@ class Wordle(gym.Env):
 
         return self.state, reward, self.done, self.info
 
-    def compute_bonus(self, state, action):
+    def compute_bonus(self, state, action, guess_counts):
         """
         :param state: the list of dictionaries containing the board state
         :param action: the string of the most recent action
         :return: the exploration bonus corresponding to this particular state and action
         """
         decoded_action = self.valid_words[action]
-        return self.exploration_model.compute_bonus(state, decoded_action)
+        return self.exploration_model.compute_bonus(state, decoded_action, guess_counts)
     
     def reset(self, seed = None, return_info = False):
         
