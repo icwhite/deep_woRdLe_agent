@@ -20,7 +20,7 @@ class Wordle(gym.Env):
                  answers: list = None,
                  subset_valid_words: int = 0,
                  subset_answers: int = 0,
-                 seed: int = None,
+                 seed: int = 0,
                  keep_answers_on_reset: bool = False,
                  exploration_model: BaseExplorationModel = BaseExplorationModel(),
                  valid_words: list = None,
@@ -65,6 +65,12 @@ class Wordle(gym.Env):
             self.reward_function = self.compute_single_board_sparse_reward
         else:
             raise NotImplementedError
+
+        # self.explore_weight_schedule = explore_weight_schedule
+        # self.exploit_weight_schedule = exploit_weight_schedule
+
+        self.explore_weight = 0
+        self.exploit_weight = 1
 
         if subset_valid_words:
             self.valid_words = np.random.choice(self.valid_words, subset_valid_words).tolist()
@@ -276,13 +282,15 @@ class Wordle(gym.Env):
 
 
         # Compute reward 
-        reward = (len(self.possible_words) - len(new_possible_words))/len(self.possible_words) - 1
+        reward = (len(self.possible_words) - len(new_possible_words))/len(self.possible_words)
         # print(f'Reduced words from {len(self.possible_words)} to {len(new_possible_words)}')
         self.possible_words = new_possible_words
             
         # Check if the board won
         if decoded_guess == decoded_answer or (len(new_possible_words) == 1 and board_guess_count < 6):
-            reward = 1
+            reward += 1
+        if decoded_guess != decoded_answer:
+            reward = reward - board_guess_count
             
         return reward
    
@@ -434,20 +442,22 @@ class Wordle(gym.Env):
         # Convert grids back to 1d state
         self.state = self._convert_grids_to_state(step_boards)
 
-        exploration_bonus = self.compute_bonus(self.state, action)
+        exploration_bonus = self.compute_bonus(step_boards, action, step_board_guess_counts)
 
-        reward = exploration_bonus + reward
+        # change this so that they have a schedule
+
+        reward = self.explore_weight * exploration_bonus + self.exploit_weight * reward
 
         return self.state, reward, self.done, self.info
 
-    def compute_bonus(self, state, action):
+    def compute_bonus(self, state, action, guess_counts):
         """
         :param state: the list of dictionaries containing the board state
         :param action: the string of the most recent action
         :return: the exploration bonus corresponding to this particular state and action
         """
         decoded_action = self.valid_words[action]
-        return self.exploration_model.compute_bonus(state, decoded_action)
+        return self.exploration_model.compute_bonus(state, decoded_action, guess_counts)
     
     def reset(self, seed = None, return_info = False):
         

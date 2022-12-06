@@ -3,5 +3,5 @@ Users/*
 utils/__pycache__/*
 .idea/
 utils.egg-info
-utils/environments/__pycache__/wordle.cpython-310.pyc
+utils/environments/__pycache__/*
 utils/exploration/__pycache__/*
