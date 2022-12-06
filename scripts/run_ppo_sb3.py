@@ -51,4 +51,4 @@ agent = sb3.PPO(policy = 'MlpPolicy',
                 verbose = 1,
                 tensorboard_log=logging)
 agent.learn(total_timesteps = params["timesteps"], log_interval = 4) # remember total times steps is number of guesses NOT number of games
-agent.save(params["exp_name"] + "_" + params["timesteps"])
+agent.save(params["exp_name"] + "_" + str(params["timesteps"]))

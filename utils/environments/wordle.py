@@ -184,36 +184,37 @@ class Wordle(gym.Env):
         # return reward
         return reward
 
-    def compute_single_board_info_gain_reward(self, board: dict, board_guess_count: int,\
-                                              decoded_answer: str, decoded_guess: str):
+    def compute_single_board_info_gain_reward(self, board: dict, board_guess_count: int, decoded_answer, decoded_guess):
+
         """
         Because green is 2, the max score is 2 x number of letters
         We give a score of -1 for any bad guessses
 
         board: dict of form {'letters': [...], 'colors': [...]}
         """
-        # Grab the letters and colors
-        guess_letters, guess_colors = board['letters'][board_guess_count], board['colors'][board_guess_count]
 
-        # Compute information gain
-        score = 0
-        for letter, color in zip(guess_letters, guess_colors):
-            # green scores
-            if (color == 2) and (letter not in self.green_letters):
-                score += 2
-            elif (color == 1) and (letter not in self.yellow_letters):
-                score += 1
+        new_greens, new_yellows, other_letters = 0, 0, 0
+        for guess_letter, answer_letter in zip(decoded_guess, decoded_answer):
+
+            if (guess_letter == answer_letter) and (guess_letter not in self.green_letters):
+                new_greens += 1
+                self.green_letters.append(guess_letter)
+            elif (guess_letter in decoded_answer) and (guess_letter not in self.yellow_letters):
+                new_yellows += 1
+                self.yellow_letters.append(guess_letter)
             else:
-                score -= 1
+                other_letters += 1
+
+        score = 2 * new_greens + 1 * new_yellows - other_letters
 
         # Check if won board
-        won = np.sum(guess_colors) == 2 * self.n_letters
+        won = (decoded_guess == decoded_answer)
         if not won:
             score -= 10
 
-        return score, won
-       
-    def compute_single_board_reward(self, board: dict, board_guess_count: int, decoded_answer: str, 
+        return score
+
+    def compute_single_board_reward(self, board: dict, board_guess_count: int, decoded_answer: str,
                                     decoded_guess: str): 
         
         """
