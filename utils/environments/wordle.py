@@ -52,8 +52,9 @@ class Wordle(gym.Env):
         self.valid_words = sorted(self.valid_words)
 
         self.sparse_reward = False
-        self.explore_weight = 0.4
-        self.exploit_weight = 0.6
+
+        # self.explore_weight_schedule = explore_weight_schedule
+        # self.exploit_weight_schedule = exploit_weight_schedule
 
         if subset_valid_words:
             self.valid_words = np.random.choice(self.valid_words, subset_valid_words).tolist()
@@ -386,7 +387,9 @@ class Wordle(gym.Env):
         # Convert grids back to 1d state
         self.state = self._convert_grids_to_state(step_boards)
 
-        exploration_bonus = self.compute_bonus(self.state, action)
+        exploration_bonus = self.compute_bonus(step_boards, action, step_board_guess_counts)
+
+        # change this so that they have a schedule
 
         reward = self.explore_weight * exploration_bonus + self.exploit_weight * reward
 
