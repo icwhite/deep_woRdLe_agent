@@ -10,6 +10,7 @@ parser.add_argument("--subset_valid_words", type=int, default=False)
 parser.add_argument("--subset_answers", type=int, default=False)
 parser.add_argument("--learning_rate", '-lr', type=float, default = 0.0003)
 parser.add_argument("--timesteps", type=int, default= 1_000_000)
+parser.add_argument("--reward", type=str, default="elimination")
 
 
 args = parser.parse_args()
@@ -32,7 +33,8 @@ env = Wordle(n_boards=1,
              subset_answers=params["subset_answers"],
              keep_answers_on_reset=False, 
              valid_words = wordle_words,
-             logdir=os.path.join(logging, "win_logs"))
+             logdir=os.path.join(logging, "win_logs"),
+             reward=params["reward"])
 
 
 
@@ -49,4 +51,4 @@ agent = sb3.PPO(policy = 'MlpPolicy',
                 verbose = 1,
                 tensorboard_log=logging)
 agent.learn(total_timesteps = params["timesteps"], log_interval = 4) # remember total times steps is number of guesses NOT number of games
-agent.save('ppo_lr_0.0003_2mill')
+agent.save(params["exp_name"] + "_" + str(params["timesteps"]))

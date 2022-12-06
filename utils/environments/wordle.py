@@ -25,7 +25,8 @@ class Wordle(gym.Env):
                  exploration_model: BaseExplorationModel = BaseExplorationModel(),
                  valid_words: list = None,
                  logdir: str = None,
-                 logging_freq: int = 500):
+                 logging_freq: int = 500,
+                 reward: str = "elimination"):
         
         """
         n_boards: number of boards that are played at once
@@ -34,6 +35,10 @@ class Wordle(gym.Env):
         answers: list of answers. If None then answers are selected at random
         seed: seed for selecting random answers. If None then different answers will be selected each time
         keep_answers_on_reset: whether we should select new answers on each reset.
+        exploration_model: the exploration model to be used
+        logdir: the logging directory
+        logging_freq: how often we log the win ratio
+        reward: chooses which reward function we want to use
         """
         
         
@@ -51,7 +56,15 @@ class Wordle(gym.Env):
         self.valid_words = [word for word in self.valid_words if "'" not in word and "." not in word and "&" not in word]
         self.valid_words = sorted(self.valid_words)
 
-        self.sparse_reward = False
+        # pick which reward function we want to use
+        if reward == "elimination":
+            self.reward_function = self.compute_single_board_sparse_reward
+        elif reward == "info":
+            self.reward_function = self.compute_single_board_info_gain_reward
+        elif reward == "sparse":
+            self.reward_function = self.compute_single_board_sparse_reward
+        else:
+            raise NotImplementedError
 
         # self.explore_weight_schedule = explore_weight_schedule
         # self.exploit_weight_schedule = exploit_weight_schedule
@@ -122,6 +135,10 @@ class Wordle(gym.Env):
         return [self.encoder[letter] for letter in word]    
     
     def _decode(self, letters_list: list):
+        """
+        :param letters_list: list of letters where each value is from 0 to 25 mapping to a-z
+        :return: a word/string containing the corresponding letters
+        """
         return [self.decoder[idx] for idx in letters_list]               
         
     def _convert_state_to_grids(self, state_1d): 
@@ -151,7 +168,8 @@ class Wordle(gym.Env):
         
         return np.array([np.append(board['letters'], board['colors']) for board in boards], dtype=int).flatten()
 
-    def compute_single_board_sparse_reward(self, board: dict, board_guess_count: int):
+    def compute_single_board_sparse_reward(self, board: dict, board_guess_count: int,\
+                                           decoded_answer:str, decoded_guess: str):
 
 
         """
@@ -168,8 +186,38 @@ class Wordle(gym.Env):
 
         # return reward
         return reward
-       
-    def compute_single_board_reward(self, board: dict, board_guess_count: int, decoded_answer: str, 
+
+    def compute_single_board_info_gain_reward(self, board: dict, board_guess_count: int, decoded_answer, decoded_guess):
+
+        """
+        Because green is 2, the max score is 2 x number of letters
+        We give a score of -1 for any bad guessses
+
+        board: dict of form {'letters': [...], 'colors': [...]}
+        """
+
+        new_greens, new_yellows, other_letters = 0, 0, 0
+        for guess_letter, answer_letter in zip(decoded_guess, decoded_answer):
+
+            if (guess_letter == answer_letter) and (guess_letter not in self.green_letters):
+                new_greens += 1
+                self.green_letters.append(guess_letter)
+            elif (guess_letter in decoded_answer) and (guess_letter not in self.yellow_letters):
+                new_yellows += 1
+                self.yellow_letters.append(guess_letter)
+            else:
+                other_letters += 1
+
+        score = 2 * new_greens + 1 * new_yellows - other_letters
+
+        # Check if won board
+        won = (decoded_guess == decoded_answer)
+        if not won:
+            score -= 10
+
+        return score
+
+    def compute_single_board_reward(self, board: dict, board_guess_count: int, decoded_answer: str,
                                     decoded_guess: str): 
         
         """
@@ -288,11 +336,8 @@ class Wordle(gym.Env):
 
             # Compute board reward 
             decoded_answer = self._decode(encoded_answer)
-            if self.sparse_reward:
-                board_reward = self.compute_single_board_sparse_reward(board, board_guess_count)
-            else:
-                board_reward = self.compute_single_board_reward(board, board_guess_count,
-                                                                       decoded_answer, decoded_action)
+
+            board_reward = self.reward_function(board, board_guess_count, decoded_answer, decoded_action)
 
             board_win = len(self.possible_words) == 1 or decoded_answer == decoded_action
 
@@ -302,6 +347,11 @@ class Wordle(gym.Env):
             return board, board_reward, board_win, board_guess_count
 
     def _new_colors(self, encoded_answer, encoded_action):
+        """
+        Function for finding the colors in the next board state.
+        Returns a list of [0 0 2 1 0] where 2 refers to a green letter,
+        1 refers to a yellow letter and 0 refers to a gray letter.
+        """
         # Update colors
         new_colors = []
         for answer_letters, guess_letter in zip(encoded_answer, encoded_action):
@@ -396,6 +446,11 @@ class Wordle(gym.Env):
         return self.state, reward, self.done, self.info
 
     def compute_bonus(self, state, action):
+        """
+        :param state: the list of dictionaries containing the board state
+        :param action: the string of the most recent action
+        :return: the exploration bonus corresponding to this particular state and action
+        """
         decoded_action = self.valid_words[action]
         return self.exploration_model.compute_bonus(state, decoded_action)
     
@@ -449,10 +504,19 @@ class Wordle(gym.Env):
         return self.state
 
     def _win_ratio(self):
+        """
+        Computes the win ration of games currently in the victory buffer.
+        :return: the win ratio
+        """
         wins = sum(self.victory_buffer)
         return wins/len(self.victory_buffer)
 
     def do_logging(self, logs, num_games):
+        """
+        :param logs: dictionary containing values to be logged
+        :param num_games: the number of games
+        :return: logs values to tensorboard
+        """
         print(f"Number of Games: {num_games}")
         for key, value in logs.items():
             print('{} : {}'.format(key, value))
