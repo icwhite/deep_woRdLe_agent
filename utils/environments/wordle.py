@@ -58,7 +58,7 @@ class Wordle(gym.Env):
 
         # pick which reward function we want to use
         if reward == "elimination":
-            self.reward_function = self.compute_single_board_sparse_reward
+            self.reward_function = self.compute_single_board_reward
         elif reward == "info":
             self.reward_function = self.compute_single_board_info_gain_reward
         elif reward == "sparse":

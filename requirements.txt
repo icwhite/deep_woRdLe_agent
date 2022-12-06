@@ -26,4 +26,4 @@ zipp==3.11.0
 tensorboard==2.10.0
 tensorboardX==2.5.1
 pytorch-lightning==1.0.8
-pytorch-lightning-bolts==0.2.5rc1
+pytorch-lightning-bolts==0.2.5
