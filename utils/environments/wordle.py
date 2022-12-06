@@ -132,6 +132,10 @@ class Wordle(gym.Env):
         return [self.encoder[letter] for letter in word]    
     
     def _decode(self, letters_list: list):
+        """
+        :param letters_list: list of letters where each value is from 0 to 25 mapping to a-z
+        :return: a word/string containing the corresponding letters
+        """
         return [self.decoder[idx] for idx in letters_list]               
         
     def _convert_state_to_grids(self, state_1d): 
@@ -328,11 +332,8 @@ class Wordle(gym.Env):
 
             # Compute board reward 
             decoded_answer = self._decode(encoded_answer)
-            if self.sparse_reward:
-                board_reward = self.compute_single_board_sparse_reward(board, board_guess_count)
-            else:
-                board_reward = self.reward_function(board, board_guess_count,
-                                                                       decoded_answer, decoded_action)
+
+            board_reward = self.reward_function(board, board_guess_count, decoded_answer, decoded_action)
 
             board_win = len(self.possible_words) == 1 or decoded_answer == decoded_action
 
@@ -439,6 +440,11 @@ class Wordle(gym.Env):
         return self.state, reward, self.done, self.info
 
     def compute_bonus(self, state, action):
+        """
+        :param state: the list of dictionaries containing the board state
+        :param action: the string of the most recent action
+        :return: the exploration bonus corresponding to this particular state and action
+        """
         decoded_action = self.valid_words[action]
         return self.exploration_model.compute_bonus(state, decoded_action)
     
@@ -492,10 +498,19 @@ class Wordle(gym.Env):
         return self.state
 
     def _win_ratio(self):
+        """
+        Computes the win ration of games currently in the victory buffer.
+        :return: the win ratio
+        """
         wins = sum(self.victory_buffer)
         return wins/len(self.victory_buffer)
 
     def do_logging(self, logs, num_games):
+        """
+        :param logs: dictionary containing values to be logged
+        :param num_games: the number of games
+        :return: logs values to tensorboard
+        """
         print(f"Number of Games: {num_games}")
         for key, value in logs.items():
             print('{} : {}'.format(key, value))
