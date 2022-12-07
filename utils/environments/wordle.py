@@ -23,7 +23,7 @@ class Wordle(gym.Env):
                  seed: int = 0,
                  keep_answers_on_reset: bool = False,
                  exploration_model: BaseExplorationModel = BaseExplorationModel(),
-                 explore_weight_schedule=PiecewiseSchedule([(0, 1), (19999, 1)], outside_value=0),
+                 explore_weight_schedule=ConstantSchedule(1), # PiecewiseSchedule([(0, 1), (19999, 1)], outside_value=0),
                  valid_words: list = None,
                  logdir: str = None,
                  logging_freq: int = 500,
