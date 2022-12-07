@@ -6,14 +6,14 @@ from utils.exploration.base_exploration_model import BaseExplorationModel
 from gym.utils.env_checker import check_env
 from collections import deque
 from utils.infrastructure.logger import Logger
-
+from utils.infrastructure.schedule_utils import *
 
 from collections import defaultdict
 import re
 
-class Wordle(gym.Env): 
-    
-    def __init__(self, 
+class Wordle(gym.Env):
+
+    def __init__(self,
                  n_boards: int = 1,
                  n_letters: int = 5,
                  n_guesses: int = 6,
@@ -23,11 +23,12 @@ class Wordle(gym.Env):
                  seed: int = 0,
                  keep_answers_on_reset: bool = False,
                  exploration_model: BaseExplorationModel = BaseExplorationModel(),
+                 explore_weight_schedule=PiecewiseSchedule([(0, 1), (19999, 1)], outside_value=0),
                  valid_words: list = None,
                  logdir: str = None,
                  logging_freq: int = 500,
                  reward: str = "elimination"):
-        
+
         """
         n_boards: number of boards that are played at once
         n_letters: number of letters per word
@@ -40,17 +41,17 @@ class Wordle(gym.Env):
         logging_freq: how often we log the win ratio
         reward: chooses which reward function we want to use
         """
-        
-        
+
+
         # Store attributes 
         self.n_boards = n_boards
         self.n_letters = n_letters
         self.n_guesses = n_guesses
-        self.seed = seed 
+        self.seed = seed
         np.random.seed(self.seed)
         self.keep_answers_on_reset = keep_answers_on_reset
         self.exploration_model = exploration_model
-        
+        self.t = 0
         # Create the list of valid words of length n_letters
         self.valid_words = valid_words if valid_words is not None else [word.lower() for word in english_words_set if len(word) == self.n_letters]
         self.valid_words = [word for word in self.valid_words if "'" not in word and "." not in word and "&" not in word]
@@ -66,11 +67,11 @@ class Wordle(gym.Env):
         else:
             raise NotImplementedError
 
-        # self.explore_weight_schedule = explore_weight_schedule
+        self.explore_weight_schedule = explore_weight_schedule
         # self.exploit_weight_schedule = exploit_weight_schedule
 
-        self.explore_weight = 0
-        self.exploit_weight = 1
+        self.explore_weight = self.explore_weight_schedule.value(self.t)
+        self.exploit_weight = 1 - self.explore_weight
 
         if subset_valid_words:
             self.valid_words = np.random.choice(self.valid_words, subset_valid_words).tolist()
@@ -79,16 +80,16 @@ class Wordle(gym.Env):
         else:
             self.valid_answers = self.valid_words
 
-        
-        # Create answers. If we pass a list it will set as answers. Otherwise it will generate a list 
+
+        # Create answers. If we pass a list it will set as answers. Otherwise it will generate a list
         # of size n_boards of random answers. 
         # Alternatively, we can pass a seed for reproducibility
-        if answers is not None: 
+        if answers is not None:
             assert(isinstance(answers, list))
             assert(len(answers) == self.n_boards)
             assert([len(answer) == self.n_letters for answer in answers])
             self.answers = answers
-        else: 
+        else:
             self.answers = np.random.choice(self.valid_answers, self.n_boards).tolist()
 
         # create encoder and decoder for later use in self._encode and self._decode
@@ -96,20 +97,20 @@ class Wordle(gym.Env):
         self.decoder = dict(zip(np.arange(26), list("abcdefghijklmnopqrstuvwxyz")))
 
         self.encoded_answers = [self._encode(answer) for answer in self.answers]
-            
-            
+
+
         # Action Space 
         self.action_space = spaces.Discrete(len(self.valid_words))
-        
+
         # Observation Space 
         self.obs_dims = self.n_boards * self.n_letters * self.n_guesses * 2 # 2 for letters/colors
         self.observation_space = spaces.Box(low = -1,
-                                            high = 25, 
-                                            shape = (self.obs_dims,), 
+                                            high = 25,
+                                            shape = (self.obs_dims,),
                                             dtype = int)
         # Initialize State
         self.state = -1 * np.ones(self.obs_dims, dtype = int)
-        
+
         # Initialize tracking variables
         self.guess_count = 0
         self.wins = [False] * self.n_boards # tracks which boards have been won already
@@ -126,49 +127,49 @@ class Wordle(gym.Env):
         self.num_games = 0
 
         self.possible_words = self.valid_words
-        self.alphabet = ['a', 'b', 'c' , 'd', 'e', 'f', 'g', 'h', 'i', 
+        self.alphabet = ['a', 'b', 'c' , 'd', 'e', 'f', 'g', 'h', 'i',
             'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
             't', 'u', 'v', 'w', 'x', 'y', 'z']
-        
-    def _encode(self, word: str): 
+
+    def _encode(self, word: str):
         """
         Inputs a word of length n_letters as a string and maps to a list of ints corresponding to 
         each letter a = 0, b = 1, ..., z = 25
         """
-        return [self.encoder[letter] for letter in word]    
-    
+        return [self.encoder[letter] for letter in word]
+
     def _decode(self, letters_list: list):
         """
         :param letters_list: list of letters where each value is from 0 to 25 mapping to a-z
         :return: a word/string containing the corresponding letters
         """
-        return [self.decoder[idx] for idx in letters_list]               
-        
-    def _convert_state_to_grids(self, state_1d): 
-        
+        return [self.decoder[idx] for idx in letters_list]
+
+    def _convert_state_to_grids(self, state_1d):
+
         """
         Converts the 1d array into a list of dictionaries. Note that the 2
         comes from the fact that we have separate grids for letters and colors.
         [ {'letters': [...], 'colors': [...]}, {'letters': [...], 'colors': [...]}, ..., ]
         """
-        
+
         # Convert the 1d array into an array of size n_boards x 2 * n_guesses x n_letters
         state = state_1d.reshape(( self.n_boards, 2 * self.n_guesses, self.n_letters, ))
-        
+
         # Convert into list of dictionaries 
         state_list = [{'letters': board[:self.n_guesses], 'colors': board[self.n_guesses:]} for board in state]
-        
+
         return state_list
-    
-    def _convert_grids_to_state(self, boards): 
-        
+
+    def _convert_grids_to_state(self, boards):
+
         """
         Converts the states from list of dictionaries to a single flattened list of size 
         n_boards * n_guesses * n_letters * 2 (2 because we have separate grids for letters and colors)
         
         boards: list of dict of form [ {'letters': [...], 'colors': [...]}, {'letters': [...], 'colors': [...]}, ..., ]
         """
-        
+
         return np.array([np.append(board['letters'], board['colors']) for board in boards], dtype=int).flatten()
 
     def compute_single_board_sparse_reward(self, board: dict, board_guess_count: int,\
@@ -221,86 +222,86 @@ class Wordle(gym.Env):
         return score
 
     def compute_single_board_reward(self, board: dict, board_guess_count: int, decoded_answer: str,
-                                    decoded_guess: str): 
-        
+                                    decoded_guess: str):
+
         """
         Computes the number of words eliminated
         """
-        
+
         # Green dictionary with keys = 0, 1, ..., n_letter and value = '' if no green or letter if green
         green_letters = dict(zip(range(self.n_letters), ['']*self.n_letters))
-        
+
         # Yellow dict with keys = 0, 1, ..., n_letters and values are lsits of yellows
         yellow_letters = defaultdict(list)
-        
+
         # list of gray letters
         gray_letters = []
-        for idx, (guess_letter, answer_letter) in enumerate(zip(decoded_guess, decoded_answer)): 
+        for idx, (guess_letter, answer_letter) in enumerate(zip(decoded_guess, decoded_answer)):
 
             # Green Letter
-            if guess_letter == answer_letter: 
+            if guess_letter == answer_letter:
                 green_letters.update({idx: guess_letter})
 
             # yellow letter
-            elif guess_letter in decoded_answer: 
+            elif guess_letter in decoded_answer:
                 yellow_letters[idx].append(guess_letter)
 
             # Gray letter
-            else: 
+            else:
                 gray_letters.append(guess_letter)
-                
-                
+
+
         # Remove gray letters from the alphabet
         self.alphabet = sorted(set(self.alphabet) - set(gray_letters))
-        
+
         # Create the new pattern
         pattern = r''
-        for i in range(self.n_letters): 
+        for i in range(self.n_letters):
 
             # Check if there is green or yellow
             is_green = green_letters[i] != ''
             has_yellow = len(yellow_letters[i])  > 0
 
-            if is_green: 
+            if is_green:
                 # if green then it should just be that letter as the only option
                 letter_pattern = '[' + green_letters[i] + ']'
 
-            elif has_yellow: 
-                
+            elif has_yellow:
+
                 # if yellow then it's the alphabet minus the letters that can't be there
                 letter_alphabet = [letter for letter in self.alphabet if letter not in yellow_letters[i]]
                 letter_pattern = '[' + ''.join(letter_alphabet) + ']'
 
-            else: 
+            else:
                 # otherwise just the remaining alphabet
                 letter_pattern = '[' + ''.join(self.alphabet) + ']'
 
             pattern += letter_pattern
-            
+
         # Filter possible words 
         new_possible_words = [word for word in self.possible_words if bool(re.match(pattern, word))]
 
 
-        # Compute reward 
+        # Compute reward
         reward = (len(self.possible_words) - len(new_possible_words))/len(self.possible_words)
         # print(f'Reduced words from {len(self.possible_words)} to {len(new_possible_words)}')
         self.possible_words = new_possible_words
-            
+
         # Check if the board won
         if decoded_guess == decoded_answer or (len(new_possible_words) == 1 and board_guess_count < 6):
             reward += 1
         if decoded_guess != decoded_answer:
             reward = reward - board_guess_count
-            
+
         return reward
-   
-    def update_single_board(self, 
-                            board: dict, 
-                            action: int, 
+
+    def update_single_board(self,
+                            board: dict,
+                            action: int,
                             encoded_answer: list,
                             board_guess_count: int,
-                            board_win: bool): 
-        
+                            board_win: bool):
+
         """
         Takes the action as index from list of actions and converts to words/list of letter-numbers
         and then updates the board
@@ -316,18 +317,18 @@ class Wordle(gym.Env):
          (i.e. doesn't make the guess)
          
         """
-        
+
         # If the game is over, we can't make any guesses
-        if self.done: 
+        if self.done:
             return board, 0, True, board_guess_count
-        
+
         # If the board is complete, we can't make any guesses
-        elif board_win: 
-            
+        elif board_win:
+
             return board, 0, True, board_guess_count
-        
-        else: 
-                    
+
+        else:
+
             # Grab action
             decoded_action = self.valid_words[action]
             encoded_action = self._encode(decoded_action)
@@ -339,7 +340,7 @@ class Wordle(gym.Env):
             board['colors'][board_guess_count] = self._new_colors(encoded_answer, encoded_action)
 
 
-            # Compute board reward 
+            # Compute board reward
             decoded_answer = self._decode(encoded_answer)
 
             board_reward = self.reward_function(board, board_guess_count, decoded_answer, decoded_action)
@@ -348,7 +349,7 @@ class Wordle(gym.Env):
 
             # Increment guess count on that board
             board_guess_count += 1
-            
+
             return board, board_reward, board_win, board_guess_count
 
     def _new_colors(self, encoded_answer, encoded_action):
@@ -378,46 +379,43 @@ class Wordle(gym.Env):
                 new_colors.append(0)
 
         return new_colors
-    
-    def step(self, action: int): 
-        
+
+    def step(self, action: int):
+
         """
         Updates each board using the same action and then checks rewards/increments state/etc
         
         action: integer for the index of self.valid_words selected as the guess
         """
-        
+
         # Convert the 1d state into grids for easier use 
         state_list = self._convert_state_to_grids(self.state)
-        
+
         # Initialize stats for updating all boards to track everything
         # these will update the global attributes later
         step_boards = []
         step_rewards = []
         step_wins = []
         step_board_guess_counts = []
-        for idx, board in enumerate(state_list): 
+        for idx, board in enumerate(state_list):
 
             # Get board answer and whether we've finished this board
             encoded_answer = self.encoded_answers[idx]
             board_win = self.wins[idx]
             board_guess_count = self.board_guess_counts[idx]
 
-
-            # Update each board 
-            new_board, board_reward, win, board_guess_count = self.update_single_board(board, 
-                                                                                       action, 
-                                                                                       encoded_answer, 
+            # Update each board
+            new_board, board_reward, win, board_guess_count = self.update_single_board(board,
+                                                                                       action,
+                                                                                       encoded_answer,
                                                                                        board_guess_count,
                                                                                        board_win)
 
-
-            # Append step information 
+            # Append step information
             step_boards.append(new_board)
             step_rewards.append(board_reward)
             step_wins.append(win)
             step_board_guess_counts.append(board_guess_count)
-
 
         # Compute total reward as mean of reward across n_boards. Picked mean so it's same reward across envs
         reward = np.mean(step_rewards)
@@ -425,6 +423,8 @@ class Wordle(gym.Env):
         # Increment guess count 
         self.guess_count += 1
 
+        # Increment time
+        self.t += 1
 
         # Check stopping conditions
         win = np.all(step_wins)
@@ -434,10 +434,10 @@ class Wordle(gym.Env):
         # Update info
         self.wins = step_wins
         self.board_guess_counts = step_board_guess_counts
-        self.info = {'guess_count': self.guess_count, 
-                     'boards_win': self.wins, 
-                     'board_guess_counts': self.board_guess_counts, 
-                     'win': win} 
+        self.info = {'guess_count': self.guess_count,
+                     'boards_win': self.wins,
+                     'board_guess_counts': self.board_guess_counts,
+                     'win': win}
 
         # Convert grids back to 1d state
         self.state = self._convert_grids_to_state(step_boards)
@@ -445,7 +445,11 @@ class Wordle(gym.Env):
         exploration_bonus = self.compute_bonus(step_boards, action, step_board_guess_counts)
 
         # change this so that they have a schedule
+        self.explore_weight = self.explore_weight_schedule.value(self.t)
+        self.exploit_weight = 1 - self.explore_weight
 
+        # if self.t % 1000 == 0:
+        #     print(self.t, self.explore_weight, self.exploit_weight)
         reward = self.explore_weight * exploration_bonus + self.exploit_weight * reward
 
         return self.state, reward, self.done, self.info
@@ -458,9 +462,9 @@ class Wordle(gym.Env):
         """
         decoded_action = self.valid_words[action]
         return self.exploration_model.compute_bonus(state, decoded_action, guess_counts)
-    
+
     def reset(self, seed = None, return_info = False):
-        
+
         """
         Resets the environment
         
@@ -476,36 +480,36 @@ class Wordle(gym.Env):
                 "win ratio": self._win_ratio()
             }
             self.do_logging(logs, self.num_games)
-    
+
         # Create answers. We can keep answers as well.
         if self.keep_answers_on_reset:
             self.answers = self.answers
             self.encoded_answers = [self._encode(answer) for answer in self.answers]
-        else: 
+        else:
             self.answers = np.random.choice(self.valid_answers, self.n_boards).tolist()
             self.encoded_answers = [self._encode(answer) for answer in self.answers]
-                        
+
         # Initialize State
         self.state = -1 * np.ones(self.obs_dims, dtype = int)
-        
+
         # Initialize tracking variables
         self.guess_count = 0
         self.wins = [False] * self.n_boards # tracks which boards have been won already
         self.done = False # overall is the game done
         self.board_guess_counts = [self.guess_count] * self.n_boards # guess count for each board
-        
+
         self.green_letters = [] # letters that we know are green
         self.yellow_letters = [] # letters that are yellow (runs into case of guessing the same letter in two spots and it's yellow both times)
         # but we'll ignore for now
-        
+
         self.possible_words = self.valid_words
-        self.alphabet = ['a', 'b', 'c' , 'd', 'e', 'f', 'g', 'h', 'i', 
+        self.alphabet = ['a', 'b', 'c' , 'd', 'e', 'f', 'g', 'h', 'i',
             'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
             't', 'u', 'v', 'w', 'x', 'y', 'z']
-    
+
         if return_info:
             return self.state, self.info
-                        
+
         return self.state
 
     def _win_ratio(self):
@@ -529,7 +533,7 @@ class Wordle(gym.Env):
         print("\n")
 
 # class Wordle(gym.Env): 
-    
+
     # def __init__(self,
     #              n_boards: int = 1,
     #              n_letters: int = 5,
