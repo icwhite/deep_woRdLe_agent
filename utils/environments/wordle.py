@@ -58,18 +58,20 @@ class Wordle(gym.Env):
 
         # pick which reward function we want to use
         if reward == "elimination":
-            self.reward_function = self.compute_single_board_sparse_reward
+            self.reward_function = self.compute_single_board_reward
         elif reward == "info":
             self.reward_function = self.compute_single_board_info_gain_reward
         elif reward == "sparse":
             self.reward_function = self.compute_single_board_sparse_reward
+        elif reward == "possible_words":
+            self.reward_function = self.compute_reward_possible_words
         else:
             raise NotImplementedError
 
         # self.explore_weight_schedule = explore_weight_schedule
         # self.exploit_weight_schedule = exploit_weight_schedule
 
-        self.explore_weight = 0
+        self.explore_weight = 1
         self.exploit_weight = 1
 
         if subset_valid_words:
@@ -142,7 +144,8 @@ class Wordle(gym.Env):
         :param letters_list: list of letters where each value is from 0 to 25 mapping to a-z
         :return: a word/string containing the corresponding letters
         """
-        return [self.decoder[idx] for idx in letters_list]               
+        lst = [self.decoder[idx] for idx in letters_list]
+        return "".join(lst)
         
     def _convert_state_to_grids(self, state_1d): 
         
@@ -287,11 +290,23 @@ class Wordle(gym.Env):
         self.possible_words = new_possible_words
             
         # Check if the board won
-        if decoded_guess == decoded_answer or (len(new_possible_words) == 1 and board_guess_count < 6):
-            reward += 1
+        if decoded_guess == decoded_answer:
+            reward += 10
         if decoded_guess != decoded_answer:
-            reward = reward - board_guess_count
+            reward = reward - 10
             
+        return reward
+
+    def compute_reward_possible_words(self, board: dict, board_guess_count: int, decoded_answer: str,
+                                    decoded_guess: str):
+        """
+        Compute reward with a penalty for guessing a word not in possible words.
+        """
+        reward = self.compute_single_board_info_gain_reward(board, board_guess_count, decoded_answer, decoded_guess)
+
+        if decoded_guess not in self.possible_words:
+            reward = reward - 2/len(self.possible_words)
+
         return reward
    
     def update_single_board(self, 
@@ -344,7 +359,7 @@ class Wordle(gym.Env):
 
             board_reward = self.reward_function(board, board_guess_count, decoded_answer, decoded_action)
 
-            board_win = len(self.possible_words) == 1 or decoded_answer == decoded_action
+            board_win = decoded_answer == decoded_action or (len(self.possible_words) == 1 and board_guess_count < 6)
 
             # Increment guess count on that board
             board_guess_count += 1
@@ -523,6 +538,9 @@ class Wordle(gym.Env):
         :return: logs values to tensorboard
         """
         print(f"Number of Games: {num_games}")
+        print(f"State: \n {self.state}")
+        print(f"Possible Words: \n {self.possible_words}")
+        print(f"Answer: \n {self.answers}")
         for key, value in logs.items():
             print('{} : {}'.format(key, value))
             self.logger.log_scalar(value, key, num_games)

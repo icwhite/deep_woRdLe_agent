@@ -32,7 +32,7 @@ env = Wordle(n_boards=1,
              subset_valid_words=params["subset_valid_words"],
              subset_answers=params["subset_answers"],
              keep_answers_on_reset=False, 
-             valid_words = wordle_words,
+             valid_words=wordle_words,
              logdir=os.path.join(logging, "win_logs"),
              reward=params["reward"])
 
