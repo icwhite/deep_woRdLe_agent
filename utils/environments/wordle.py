@@ -450,7 +450,7 @@ class Wordle(gym.Env):
 
         # if self.t % 1000 == 0:
         #     print(self.t, self.explore_weight, self.exploit_weight)
-        reward = self.explore_weight * exploration_bonus + self.exploit_weight * reward
+        reward = self.explore_weight * (exploration_bonus + reward) + self.exploit_weight * reward
 
         return self.state, reward, self.done, self.info
 
