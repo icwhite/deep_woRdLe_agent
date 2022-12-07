@@ -35,7 +35,7 @@ def train(model, iterations, batch_size):
 
         loss = model.update(one_hot_letters, one_hot_words)
 
-def evaluation(model, batch_size):
+# def evaluation(model, batch_size):
 
 
 # next do eval portion
