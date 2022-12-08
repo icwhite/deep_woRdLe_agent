@@ -706,6 +706,10 @@ class WordleSimple(gym.Env):
         self.alphabet = list('abcdefghijklmnopqrstuvwxyz')
         self.state = np.ones(len(self.valid_words), dtype = int)
         self.guess_count = 0
+
+        # Reset answer 
+        if not self.keep_answer_on_reset:
+            self.answer = np.random.choice(self.valid_words)
         
         
         return self.state
