@@ -584,6 +584,7 @@ class WordleSimple(gym.Env):
         self.logging_freq = 500
         self.num_games = 0
         self.victory_buffer = deque(maxlen = self.logging_freq)
+        self.in_possible_words_buffer = deque(maxlen = self.logging_freq)
         self.win = False
         self.logger = Logger(logdir)   
         
@@ -686,7 +687,11 @@ class WordleSimple(gym.Env):
 
         ### TRY GIVING THIS REWARD INSTEAD ###
         reward = 1 if guess in self.possible_words else -1
-        
+        if reward == 1: 
+            self.in_possible_words_buffer.append(1)
+        else: 
+            self.in_possible_words_buffer.append(0)
+
         # Update state
         self.state = np.array([1 if word in new_possible_words else 0 for word in self.valid_words], dtype=int)
         assert(self.state.shape == self.observation_space.shape), f'{self.state.shape}'
@@ -717,6 +722,9 @@ class WordleSimple(gym.Env):
                 "win ratio": self._compute_win_ratio()
             }
             self.do_logging(logs, self.num_games)
+
+            # Print in possible words 
+            print('Percent of Guesses in Possible Words: ', np.round(np.mean(self.in_possible_words_buffer), 4))
     
        
         # Reset possible words = all valid words
@@ -760,7 +768,6 @@ class WordleSimple(gym.Env):
             print('{} : {}'.format(key, value))
             self.logger.log_scalar(value, key, num_games)
         print("\n")
-
 
 # class WordleSimple(gym.Env): 
     
