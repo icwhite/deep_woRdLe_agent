@@ -591,7 +591,7 @@ class WordleSimple(gym.Env):
         self.win = False
         self.logger = Logger(logdir)
         
-    def compute_possible_words(self, guess): 
+    def _compute_reward(self, guess): 
     
         
         # Init structures to check which letters are green and which are yellow
@@ -648,28 +648,14 @@ class WordleSimple(gym.Env):
 
             
         return reward, won, new_possible_words
-    
-    def compute_reward(self, guess): 
-
-        # Compute possible words 
-        new_possible_words = self.compute_possible_words(guess)
-
-        # Compute reward
-        # reward = (len(self.possible_words) - len(new_possible_words))/len(self.possible_words)
-        reward = 1 if guess in self.possible_words else -1
-        
-        # Check if won 
-        win = bool(guess == self.answer)
-
-        return reward, win, new_possible_words
-    
+                
     def step(self, action): 
         
         # Grab decoded word 
         guess = self.valid_words[action]
         
         # Compute reward
-        reward, win, new_possible_words = self.compute_reward(guess)
+        reward, win, new_possible_words = self._compute_reward(guess)
         
         # Add win/loss penalty
         if win: 
