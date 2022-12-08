@@ -720,8 +720,6 @@ class WordleSimple(gym.Env):
         
     def reset(self): 
 
-        # Print in possible words 
-        print('Percent of Guesses in Possible Words: ', np.round(np.mean(self.in_possible_words_buffer), 4))
 
         # Win Ratio logging
         self.victory_buffer.append(self.win)
@@ -729,6 +727,8 @@ class WordleSimple(gym.Env):
         if not self.num_games % self.logging_freq:
             logs = {"win ratio": self._compute_win_ratio()}
             self.do_logging(logs, self.num_games)
+            # Print in possible words 
+            print('Percent of Guesses in Possible Words: ', np.round(np.mean(self.in_possible_words_buffer), 4))
 
        
         # Reset possible words = all valid words
