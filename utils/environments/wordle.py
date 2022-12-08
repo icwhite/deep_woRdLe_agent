@@ -592,7 +592,9 @@ class WordleSimple(gym.Env):
         self.all_yellows = set()
         self.all_grays = set()
         
-    def _create_pattern(self, guess): 
+    def _create_pattern(self, guess, answer: str = None): 
+        
+        answer = answer if answer is not None else self.answer
         
         # Init structures to check which letters are green and which are yellow
         greens = dict(zip(range(5), ['']*5))
@@ -600,11 +602,11 @@ class WordleSimple(gym.Env):
         grays = []
 
         # Get which words belong where 
-        for idx, (guess_letter, answer_letter) in enumerate(zip(guess, self.answer)): 
+        for idx, (guess_letter, answer_letter) in enumerate(zip(guess, answer)): 
             if guess_letter == answer_letter: # green letter
                 greens.update({idx: guess_letter})
                 self.all_greens.add(guess_letter)
-            elif guess_letter in self.answer: # yellow letter
+            elif guess_letter in answer: # yellow letter
                 yellows[idx].append(guess_letter)
                 self.all_yellows.add(guess_letter)
             else: 
@@ -647,7 +649,6 @@ class WordleSimple(gym.Env):
             new_possible_words = [word for word in new_possible_words if letter in word]
             
         return new_possible_words
-        
     
     def _compute_reward(self, guess): 
         
@@ -723,6 +724,9 @@ class WordleSimple(gym.Env):
         # Reset possible words = all valid words
         self.possible_words = self.valid_words
         self.patterns = ['[abcdefghijklmnopqrstuvwxyz]']*5
+        self.all_greens = set()
+        self.all_yellows = set()
+        self.all_grays = set()
         
         # Reset alphabet, state and guess count
         self.alphabet = list('abcdefghijklmnopqrstuvwxyz')
@@ -758,7 +762,7 @@ class WordleSimple(gym.Env):
             print('{} : {}'.format(key, value))
             self.logger.log_scalar(value, key, num_games)
         print("\n")
-        
+              
 # class WordleSimple(gym.Env): 
     
 #     def __init__(self, 
