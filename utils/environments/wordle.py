@@ -292,9 +292,9 @@ class Wordle(gym.Env):
 
         # Check if the board won
         if decoded_guess == decoded_answer:
-            reward += 10
-        if decoded_guess != decoded_answer and board_guess_count == 6:
-            reward = reward - 10
+            reward += 1
+        if decoded_guess != decoded_answer:
+            reward = reward - 1
             
         return reward
 

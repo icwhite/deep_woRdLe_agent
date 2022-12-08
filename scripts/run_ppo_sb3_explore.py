@@ -4,6 +4,7 @@ from utils.exploration.count_explore_model import CountExploreModel
 from utils.exploration.diff_prev_words import DiffPrevWordsExplore
 from utils.infrastructure.schedule_utils import PiecewiseSchedule
 from utils.exploration.base_exploration_model import BaseExplorationModel
+from utils.exploration.model_based_score_explore import ModelScoreExplore
 
 import os
 import time
@@ -32,6 +33,8 @@ if params["explore"] == "diff":
     exploration_model = DiffPrevWordsExplore()
 elif params["explore"] == "count":
     exploration_model = CountExploreModel()
+elif params["explore"] == "model":
+    exploration_model = ModelScoreExplore()
 else:
     exploration_model = BaseExplorationModel()
 
@@ -45,7 +48,7 @@ data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data')
 logdir = "ppo" + "_" + params["exp_name"] + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
 logging = os.path.join(data_path, logdir)
 
-exploration_schedule = PiecewiseSchedule([(0, 1), (20000, 1), (50000, 0.5), (1000000, 0.25)], outside_value=0.25)
+exploration_schedule = PiecewiseSchedule([(0, 1), (19999, 1), (20000, 0), (999999, 0), (100000, 0.5)], outside_value=0.25)
 
 # Create Environment
 env = Wordle(n_boards=1,

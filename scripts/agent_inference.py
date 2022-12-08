@@ -14,11 +14,11 @@ wordle_words = [word.replace('\n', '') for word in wordle_words]
 env = Wordle(n_boards=1,
              n_letters=5,
              n_guesses=6,
-             answers=['least'],
+             answers=['adore'],
              valid_words=wordle_words,
             keep_answers_on_reset=True)
 
-model = sb3.PPO.load("saved_agents/ppo_lr_0.0003_2mill")
+model = sb3.PPO.load("entropy_0.001_elimination_guess_penalty_1000000_entropy0.001")
 # Enjoy trained agent
 obs = env.reset()
 print(env.answers)
