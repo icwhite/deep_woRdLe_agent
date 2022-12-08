@@ -650,14 +650,8 @@ class WordleSimple(gym.Env):
             
         return new_possible_words
     
-    def _compute_reward(self, guess): 
-        
-        # Create pattern 
-        pattern = self._create_pattern(guess)
-        
-        # Get possible words 
-        new_possible_words = self._get_possible_words(pattern)
-
+    def _compute_reward(self, guess, new_possible_words): 
+    
         # Compute reward
         reward = (len(self.possible_words) - len(new_possible_words))/len(self.possible_words)
         
@@ -673,20 +667,24 @@ class WordleSimple(gym.Env):
         # Add possible word penalty 
         if guess not in self.possible_words: 
             reward -= 1
-        
-
-            
-        return reward, win, new_possible_words
+    
+        return reward, win
                 
     def step(self, action): 
         
         # Grab decoded word 
         guess = self.valid_words[action]
         
+        # Compute pattern 
+        pattern = self._create_pattern(guess)
+        
+        # Get possibl words
+        new_possible_words = self._get_possible_words(pattern)
+        
         # Compute reward
-        _, win, new_possible_words = self._compute_reward(guess)
+        reward, win = self._compute_reward(guess, new_possible_words)
 
-        ### TRY GIVING THIS REWARD
+        ### TRY GIVING THIS REWARD INSTEAD ###
         reward = 1 if guess in self.possible_words else -1
         
         # Update state
@@ -762,7 +760,8 @@ class WordleSimple(gym.Env):
             print('{} : {}'.format(key, value))
             self.logger.log_scalar(value, key, num_games)
         print("\n")
-              
+
+
 # class WordleSimple(gym.Env): 
     
 #     def __init__(self, 
