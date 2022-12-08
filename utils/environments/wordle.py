@@ -293,7 +293,7 @@ class Wordle(gym.Env):
         # Check if the board won
         if decoded_guess == decoded_answer:
             reward += 10
-        if decoded_guess != decoded_answer:
+        if decoded_guess != decoded_answer and board_guess_count == 6:
             reward = reward - 10
             
         return reward
@@ -342,6 +342,7 @@ class Wordle(gym.Env):
 
         # If the game is over, we can't make any guesses
         if self.done:
+            print("game done!")
             return board, 0, True, board_guess_count
 
         # If the board is complete, we can't make any guesses
@@ -469,6 +470,7 @@ class Wordle(gym.Env):
         # change this so that they have a schedule
         self.explore_weight = self.explore_weight_schedule.value(self.t)
         self.exploit_weight = 1 - self.explore_weight
+
         
         reward = self.explore_weight * exploration_bonus + self.exploit_weight * reward
 
@@ -494,10 +496,14 @@ class Wordle(gym.Env):
 
         # log whether we won or not to victory buffer
         self.victory_buffer.append(np.all(self.wins))
+        if np.all(self.wins) and len(self.possible_words) != 1:
+            print("problem!!")
         self.num_games += 1
         if not self.num_games % self.logging_freq:
             logs = {
-                "win ratio": self._win_ratio()
+                "win ratio": self._win_ratio(),
+                "explore weight": self.explore_weight,
+                "exploit weight": self.exploit_weight,
             }
             self.do_logging(logs, self.num_games)
 
@@ -550,6 +556,7 @@ class Wordle(gym.Env):
         print(f"State: \n {self.state}")
         print(f"Possible Words: \n {self.possible_words}")
         print(f"Answer: \n {self.answers}")
+        print(f"Explore Weight: {self.explore_weight}, Exploit Weight: {self.exploit_weight}")
         for key, value in logs.items():
             print('{} : {}'.format(key, value))
             self.logger.log_scalar(value, key, num_games)

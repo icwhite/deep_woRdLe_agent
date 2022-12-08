@@ -7,18 +7,18 @@ import argparse
 
 
 # Get wordle words
-wordle_words = open("scripts/wordle_words.txt", "r").read().split(",")
+wordle_words = open("scripts/wordle_subset.txt", "r").read().split(",")
 wordle_words = [word.replace('\n', '') for word in wordle_words]
 
 # Create Environment
 env = Wordle(n_boards=1,
              n_letters=5,
              n_guesses=6,
-             answers=['least'],
+             answers=['mamma'],
              valid_words=wordle_words,
             keep_answers_on_reset=True)
 
-model = sb3.PPO.load("saved_agents/ppo_lr_0.0003_2mill")
+model = sb3.PPO.load("base_small_base_20000.zip")
 # Enjoy trained agent
 obs = env.reset()
 print(env.answers)
