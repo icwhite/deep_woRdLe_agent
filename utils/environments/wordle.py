@@ -592,6 +592,7 @@ class WordleSimple(gym.Env):
         self.all_greens = set()
         self.all_yellows = set()
         self.all_grays = set()
+        self.guesses = []
         
     def _create_pattern(self, guess, answer: str = None): 
         
@@ -675,6 +676,7 @@ class WordleSimple(gym.Env):
         
         # Grab decoded word 
         guess = self.valid_words[action]
+        self.guesses.append(guess)
         
         # Compute pattern 
         pattern = self._create_pattern(guess)
@@ -686,11 +688,15 @@ class WordleSimple(gym.Env):
         reward, win = self._compute_reward(guess, new_possible_words)
 
         ### TRY GIVING THIS REWARD INSTEAD ###
-        reward = 1 if guess in self.possible_words else -1
+        reward = 1 if guess in self.possible_words else -1 * self.guess_count
         if reward == 1: 
             self.in_possible_words_buffer.append(1)
         else: 
             self.in_possible_words_buffer.append(0)
+        
+        # Add penalty for guessing a word that was already guessed that game
+        if guess in self.guesses: 
+            reward -= 10
 
         # Update state
         self.state = np.array([1 if word in new_possible_words else 0 for word in self.valid_words], dtype=int)
@@ -714,18 +720,16 @@ class WordleSimple(gym.Env):
         
     def reset(self): 
 
+        # Print in possible words 
+        print('Percent of Guesses in Possible Words: ', np.round(np.mean(self.in_possible_words_buffer), 4))
+
         # Win Ratio logging
         self.victory_buffer.append(self.win)
         self.num_games += 1
         if not self.num_games % self.logging_freq:
-            logs = {
-                "win ratio": self._compute_win_ratio()
-            }
+            logs = {"win ratio": self._compute_win_ratio()}
             self.do_logging(logs, self.num_games)
 
-            # Print in possible words 
-            print('Percent of Guesses in Possible Words: ', np.round(np.mean(self.in_possible_words_buffer), 4))
-    
        
         # Reset possible words = all valid words
         self.possible_words = self.valid_words
@@ -733,6 +737,8 @@ class WordleSimple(gym.Env):
         self.all_greens = set()
         self.all_yellows = set()
         self.all_grays = set()
+        self.guesses = []
+
         
         # Reset alphabet, state and guess count
         self.alphabet = list('abcdefghijklmnopqrstuvwxyz')
