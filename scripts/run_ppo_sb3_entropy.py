@@ -32,7 +32,7 @@ env = Wordle(n_boards=1,
              n_guesses=6,
              subset_valid_words=params["subset_valid_words"],
              subset_answers=params["subset_answers"],
-             keep_answers_on_reset=False, 
+             keep_answers_on_reset=False,
              valid_words=wordle_words,
              logdir=os.path.join(logging, "win_logs"),
              reward=params["reward"])
@@ -41,16 +41,16 @@ env = Wordle(n_boards=1,
 
 # Run DQN: Link to docs (https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html)
 agent = sb3.PPO(policy = 'MlpPolicy',
-                env = env, 
-                learning_rate = params['learning_rate'], 
-                n_steps = 2048, 
-                batch_size = 64, 
-                n_epochs = 10, 
-                gamma = 0.99, 
-                gae_lambda = 0.95, 
-                clip_range = 0.2, 
+                env = env,
+                learning_rate = params['learning_rate'],
+                n_steps = 2048,
+                batch_size = 64,
+                n_epochs = 10,
+                gamma = 0.99,
+                gae_lambda = 0.95,
+                clip_range = 0.2,
                 verbose = 1,
                 tensorboard_log=logging,
                 ent_coef=params["entropy"])
 agent.learn(total_timesteps = params["timesteps"], log_interval = 4) # remember total times steps is number of guesses NOT number of games
-agent.save(params["exp_name"] + "_" + str(params["timesteps"]))
+agent.save(params["exp_name"] + "_" + str(params["timesteps"] + "_entropy"+ params["entropy"]))
