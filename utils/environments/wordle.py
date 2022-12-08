@@ -309,13 +309,6 @@ class Wordle(gym.Env):
             reward = reward - 2/len(self.possible_words)
 
         return reward
-   
-    # def update_single_board(self,
-    #                         board: dict,
-    #                         action: int,
-    #         reward = reward - board_guess_count
-    #
-    #     return reward
 
     def update_single_board(self,
                             board: dict,
@@ -562,328 +555,418 @@ class Wordle(gym.Env):
             self.logger.log_scalar(value, key, num_games)
         print("\n")
 
-# class Wordle(gym.Env): 
+class WordleSimple(gym.Env): 
+    
+    def __init__(self,
+                 answer: str = None, 
+                 valid_words: list = None, 
+                 keep_answer_on_reset: bool = False, 
+                 logdir: str = 'data'): 
+        
+        # Store attributes 
+        assert(valid_words is not None), 'Must pass valid words'
+        self.valid_words = valid_words
+        self.n_valid_words = len(self.valid_words)
+        self.answer = answer if answer is not None else np.random.choice(self.valid_words)
+        self.keep_answer_on_reset = keep_answer_on_reset
+        
+        # Action + Observation Space
+        self.action_space = gym.spaces.Discrete(self.n_valid_words)
+        self.observation_space = gym.spaces.Box(low = 0, 
+                                                high = 1, 
+                                                shape = (self.n_valid_words,), 
+                                                dtype = int)
 
-    # def __init__(self,
-    #              n_boards: int = 1,
-    #              n_letters: int = 5,
-    #              n_guesses: int = 6,
-    #              answers: list = None,
-    #              subset_valid_words: int = 0,
-    #              subset_answers: int = 0,
-    #              seed: int = None,
-    #              keep_answers_on_reset: bool = False):
-    #
-    #     """
-    #     n_boards: number of boards that are played at once
-    #     n_letters: number of letters per word
-    #     n_guesses: number of guesses per board
-    #     answers: list of answers. If None then answers are selected at random
-    #     seed: seed for selecting random answers. If None then different answers will be selected each time
-    #     keep_answers_on_reset: whether we should select new answers on each reset.
-    #     """
-    #
-    #
-    #     # Store attributes
-    #     self.n_boards = n_boards
-    #     self.n_letters = n_letters
-    #     self.n_guesses = n_guesses
-    #     self.seed = seed
-    #     self.keep_answers_on_reset = keep_answers_on_reset
-    #
-    #     # Create the list of valid words of length n_letters
-    #     self.valid_words = [word.lower() for word in english_words_set if len(word) == self.n_letters]
-    #     self.valid_words = [word for word in self.valid_words if "'" not in word and "." not in word and "&" not in word]
-    #     self.valid_words = sorted(self.valid_words)
-    #
-    #     if subset_valid_words:
-    #         self.valid_words = np.random.choice(self.valid_words, subset_valid_words).tolist()
-    #     if subset_answers:
-    #         self.valid_answers = np.random.choice(self.valid_words, subset_answers).tolist()
-    #     else:
-    #         self.valid_answers = self.valid_words
-    #
-    #     # Create answers. If we pass a list it will set as answers. Otherwise it will generate a list
-    #     # of size n_boards of random answers.
-    #     # Alternatively, we can pass a seed for reproducibility
-    #     if answers is not None:
-    #         assert(isinstance(answers, list))
-    #         assert(len(answers) == self.n_boards)
-    #         assert([len(answer) == self.n_letters for answer in answers])
-    #         self.answers = answers
-    #     else:
-    #         self.answers = np.random.choice(self.valid_words, self.n_boards).tolist()
-    #
-    #     self.encoded_answers = [self._encode(answer) for answer in self.answers]
-    #
-    #
-    #     # Action Space
-    #     self.action_space = spaces.Discrete(len(self.valid_words))
-    #
-    #     # Observation Space
-    #     self.obs_dims = self.n_boards * self.n_letters * self.n_guesses * 2 # 2 for letters/colors
-    #     self.observation_space = spaces.Box(low = -1,
-    #                                         high = 25,
-    #                                         shape = (self.obs_dims,),
-    #                                         dtype = int)
-    #     # Initialize State
-    #     self.state = -1 * np.ones(self.obs_dims, dtype = int)
-    #
-    #     # Initialize tracking variables
-    #     self.guess_count = 0
-    #     self.wins = [False] * self.n_boards # tracks which boards have been won already
-    #     self.done = False # overall is the game done
-    #     self.board_guess_counts = [self.guess_count] * self.n_boards # guess count for each board
-    #     self.green_letters = [] # letters that we know are green
-    #     self.yellow_letters = [] # letters that are yellow (runs into case of guessing the same letter in two spots and it's yellow both times)
-    #     # but we'll ignore for now
-    #
-    # def _encode(self, word: str):
-    #     """
-    #     Inputs a word of length n_letters as a string and maps to a list of ints corresponding to
-    #     each letter a = 0, b = 1, ..., z = 25
-    #     """
-    #     self.encoder = dict(zip(list("abcdefghijklmnopqrstuvwxyz"), np.arange(26)))
-    #     return [self.encoder[letter] for letter in word]
-    #
-    # def _convert_state_to_grids(self, state_1d):
-    #
-    #     """
-    #     Converts the 1d array into a list of dictionaries. Note that the 2
-    #     comes from the fact that we have separate grids for letters and colors.
-    #     [ {'letters': [...], 'colors': [...]}, {'letters': [...], 'colors': [...]}, ..., ]
-    #     """
-    #
-    #     # Convert the 1d array into an array of size n_boards x 2 * n_guesses x n_letters
-    #     state = state_1d.reshape(( self.n_boards, 2 * self.n_guesses, self.n_letters, ))
-    #
-    #     # Convert into list of dictionaries
-    #     state_list = [{'letters': board[:self.n_guesses], 'colors': board[self.n_guesses:]} for board in state]
-    #
-    #     return state_list
-    #
-    # def _convert_grids_to_state(self, boards):
-    #
-    #     """
-    #     Converts the states from list of dictionaries to a single flattened list of size
-    #     n_boards * n_guesses * n_letters * 2 (2 because we have separate grids for letters and colors)
-    #
-    #     boards: list of dict of form [ {'letters': [...], 'colors': [...]}, {'letters': [...], 'colors': [...]}, ..., ]
-    #     """
-    #
-    #     return np.array([np.append(board['letters'], board['colors']) for board in boards], dtype=int).flatten()
-    #
-    # def compute_single_board_reward(self, board: dict, board_guess_count: int):
-    #
-    #     """
-    #     Because green is 2, the max score is 2 x number of letters
-    #     We give a score of -1 for any bad guessses
-    #
-    #     board: dict of form {'letters': [...], 'colors': [...]}
-    #     """
-    #
-    #
-    #     # score = np.sum(board['colors'][board_guess_count])
-    #     # max_score = 2 * self.n_letters
-    #     # reward = 1 if score == max_score else -1
-    #
-    #     # # return reward
-    #     # return reward, score == max_score
-    #
-    #
-    #     # Grab the letters and colors
-    #     guess_letters, guess_colors = board['letters'][board_guess_count], board['colors'][board_guess_count]
-    #
-    #     # Compute information gain
-    #     score = 0
-    #     for letter, color in zip(guess_letters, guess_colors):
-    #         # green scores
-    #         if (color == 2) and (letter not in self.green_letters):
-    #             score += 2
-    #         elif (color == 1) and (letter not in self.yellow_letters):
-    #             score += 1
-    #         else:
-    #             score -= 1
-    #
-    #     # Check if won board
-    #     won = np.sum(guess_colors) == 2 * self.n_letters
-    #     if not won:
-    #         score -= 10
-    #
-    #     return score, won
-    #
-    # def update_single_board(self,
-    #                         board: dict,
-    #                         action: int,
-    #                         encoded_answer: list,
-    #                         board_guess_count: int,
-    #                         board_win: bool):
-    #
-    #     """
-    #     Takes the action as index from list of actions and converts to words/list of letter-numbers
-    #     and then updates the board
-    #     {'green': 2,
-    #      'yellow': 1,
-    #      'gray': 0,
-    #      'empty': -1}
-    #
-    #      board: dict of form {'letters': [...], 'colors': [...]}
-    #      action: integer for the index of self.valid_words selected as the guess
-    #      encoded_answer: the board answer encoded into list of integers
-    #      board_win: boolean for whether the board has already been won or not. If so, it doesn't update anythign
-    #      (i.e. doesn't make the guess)
-    #
-    #     """
-    #
-    #     # If the game is over, we can't make any guesses
-    #     if self.done:
-    #         return board, 0, True, board_guess_count
-    #
-    #     # If the board is complete, we can't make any guesses
-    #     elif board_win:
-    #
-    #         return board, 0, True, board_guess_count
-    #
-    #     else:
-    #
-    #         # Grab action
-    #         decoded_action = self.valid_words[action]
-    #         encoded_action = self._encode(decoded_action)
-    #
-    #         # Update letters grid
-    #         board['letters'][board_guess_count] = encoded_action
-    #
-    #         # Update colors
-    #         new_colors = []
-    #         for answer_letters, guess_letter in zip(encoded_answer, encoded_action):
-    #
-    #             # Green letter (i.e. correct letter in correct spot)
-    #             if guess_letter == answer_letters:
-    #                 new_colors.append(2)
-    #                 if guess_letter not in self.green_letters:
-    #                     self.green_letters.append(guess_letter)
-    #
-    #             # Yellow letter (i.e. correct letter in incorrect spot)
-    #             elif guess_letter in encoded_answer:
-    #                 new_colors.append(1)
-    #                 if guess_letter not in self.green_letters:
-    #                     self.yellow_letters.append(guess_letter)
-    #
-    #             # Gray letter (i.e. incorrect letter)
-    #             else:
-    #                 new_colors.append(0)
-    #
-    #         # Insert new color records
-    #         board['colors'][board_guess_count] = new_colors
-    #
-    #
-    #         # Compute board reward
-    #         board_reward, board_win = self.compute_single_board_reward(board, board_guess_count)
-    #
-    #
-    #         # Increment guess count on that board
-    #         board_guess_count += 1
-    #
-    #         return board, board_reward, board_win, board_guess_count
-    #
-    # def step(self, action: int):
-    #
-    #     """
-    #     Updates each board using the same action and then checks rewards/increments state/etc
-    #
-    #     action: integer for the index of self.valid_words selected as the guess
-    #     """
-    #
-    #     # Convert the 1d state into grids for easier use
-    #     state_list = self._convert_state_to_grids(self.state)
-    #
-    #     # Initialize stats for updating all boards to track everything
-    #     # these will update the global attributes later
-    #     step_boards = []
-    #     step_rewards = []
-    #     step_wins = []
-    #     step_board_guess_counts = []
-    #     for idx, board in enumerate(state_list):
-    #
-    #         # Get board answer and whether we've finished this board
-    #         encoded_answer = self.encoded_answers[idx]
-    #         board_win = self.wins[idx]
-    #         board_guess_count = self.board_guess_counts[idx]
-    #
-    #
-    #         # Update each board
-    #         new_board, board_reward, win, board_guess_count = self.update_single_board(board,
-    #                                                                                    action,
-    #                                                                                    encoded_answer,
-    #                                                                                    board_guess_count,
-    #                                                                                    board_win)
-    #
-    #
-    #         # Append step information
-    #         step_boards.append(new_board)
-    #         step_rewards.append(board_reward)
-    #         step_wins.append(win)
-    #         step_board_guess_counts.append(board_guess_count)
-    #
-    #
-    #     # Compute total reward as mean of reward across n_boards. Picked mean so it's same reward across envs
-    #     reward = np.mean(step_rewards)
-    #
-    #     # Increment guess count
-    #     self.guess_count += 1
-    #
-    #
-    #     # Check stopping conditions
-    #     win = np.all(step_wins)
-    #     reached_max_guesses = self.guess_count == self.n_guesses
-    #     self.done = bool((reached_max_guesses) or (win))
-    #
-    #     # Update info
-    #     self.wins = step_wins
-    #     self.board_guess_counts = step_board_guess_counts
-    #
-    #     self.info = {'guess_count': self.guess_count,
-    #                  'boards_win': self.wins,
-    #                  'board_guess_counts': self.board_guess_counts,
-    #                  'win': win}
-    #
-    #     # Convert grids back to 1d state
-    #     self.state = self._convert_grids_to_state(step_boards)
-    #
-    #     return self.state, reward, self.done, self.info
-    #
-    # def reset(self, seed = None, return_info = False):
-    #
-    #     """
-    #     Resets the environment
-    #
-    #     seed: random seed for selecting random answers. If none, the random answers won't be reproducible
-    #     return_info: boolean for whether we should return the info from the last game
-    #     """
-    #
-    #     # Create answers. We can keep answers as well.
-    #     if self.keep_answers_on_reset:
-    #         self.answers = self.answers
-    #         self.encoded_answers = [self._encode(answer) for answer in self.answers]
-    #     else:
-    #         self.answers = np.random.choice(self.valid_answers, self.n_boards).tolist()
-    #         self.encoded_answers = [self._encode(answer) for answer in self.answers]
-    #
-    #     # Initialize State
-    #     self.state = -1 * np.ones(self.obs_dims, dtype = int)
-    #
-    #     # Initialize tracking variables
-    #     self.guess_count = 0
-    #     self.wins = [False] * self.n_boards # tracks which boards have been won already
-    #     self.done = False # overall is the game done
-    #     self.board_guess_counts = [self.guess_count] * self.n_boards # guess count for each board
-    #
-    #     # reset green and yellow trackers
-    #     self.green_letters = []
-    #     self.yellow_letters = []
-    #
-    #
-    #     if return_info:
-    #         return self.state, self.info
-    #
-    #     return self.state
+        #  self.observation_space = gym.spaces.MultiDiscrete([2] * self.n_valid_words)
+        
+        # Init Stuff 
+        self.state = np.ones(len(self.valid_words), dtype = int)
+        self.guess_count = 0
+        self.alphabet = list('abcdefghijklmnopqrstuvwxyz')
+        self.possible_words = self.valid_words
+        self.n_possible_words = len(self.possible_words)
+        self.patterns = ['[abcdefghijklmnopqrstuvwxyz]']*5
+        
+        # Logging
+        self.logging_freq = 500
+        self.num_games = 0
+        self.victory_buffer = deque(maxlen = self.logging_freq)
+        self.in_possible_words_buffer = deque(maxlen = self.logging_freq)
+        self.win = False
+        self.logger = Logger(logdir)   
+        
+        # Track yellow letters to enforce they are in the word 
+        self.all_greens = set()
+        self.all_yellows = set()
+        self.all_grays = set()
+        self.guesses = []
+        
+    def _create_pattern(self, guess, answer: str = None): 
+        
+        answer = answer if answer is not None else self.answer
+        
+        # Init structures to check which letters are green and which are yellow
+        greens = dict(zip(range(5), ['']*5))
+        yellows = defaultdict(list)
+        grays = []
+
+        # Get which words belong where 
+        for idx, (guess_letter, answer_letter) in enumerate(zip(guess, answer)): 
+            if guess_letter == answer_letter: # green letter
+                greens.update({idx: guess_letter})
+                self.all_greens.add(guess_letter)
+            elif guess_letter in answer: # yellow letter
+                yellows[idx].append(guess_letter)
+                self.all_yellows.add(guess_letter)
+            else: 
+                grays.append(guess_letter) # gray letter
+                self.all_grays.add(guess_letter)
+
+        # Remove grays from alphabet
+        self.alphabet = sorted(set(self.alphabet) - set(grays))
+
+        for i in range(5): 
+
+            if greens[i] != '': 
+
+                # If we have the green letter, we should just replace the whole pattern with this
+                self.patterns[i] = '[' + greens[i] + ']'
+
+            elif len(yellows[i])  > 0: 
+
+                # If we get another yellow, remove it from the pattern 
+                for letter in yellows[i]: 
+                    self.patterns[i] = self.patterns[i].replace(letter, '')
+
+            else: 
+                self.patterns[i] = '[' + ''.join(self.alphabet) + ']'
+
+
+        # Combine patterns into single new pattern 
+        pattern = "".join(self.patterns)
+        
+        return pattern
+
+    def _get_possible_words(self, pattern): 
+        
+        # Get possible words by matching regex
+        new_possible_words = [word for word in self.possible_words if re.match(pattern, word)]
+
+        # Enforce that all yellows are actually in the word -- regex not tracking it necessarily
+        yellows = self.all_yellows - self.all_greens
+        for letter in yellows: 
+            new_possible_words = [word for word in new_possible_words if letter in word]
+            
+        return new_possible_words
+    
+    def _compute_reward(self, guess, new_possible_words): 
+    
+        # Compute reward
+        reward = (len(self.possible_words) - len(new_possible_words))/len(self.possible_words)
+        
+        # Check if won 
+        win = bool(guess == self.answer)
+        
+        # Add win/loss penalty
+        if win: 
+            reward += 1
+        else: 
+            reward -= 1
+        
+        # Add possible word penalty 
+        if guess not in self.possible_words: 
+            reward -= 1
+    
+        return reward, win
+                
+    def step(self, action): 
+        
+        # Grab decoded word 
+        guess = self.valid_words[action]
+        self.guesses.append(guess)
+        
+        # Compute pattern 
+        pattern = self._create_pattern(guess)
+        
+        # Get possibl words
+        new_possible_words = self._get_possible_words(pattern)
+        
+        # Compute reward
+        reward, win = self._compute_reward(guess, new_possible_words)
+
+        ### TRY GIVING THIS REWARD INSTEAD ###
+        reward = 1 if guess in self.possible_words else -1 * self.guess_count
+        if reward == 1: 
+            self.in_possible_words_buffer.append(1)
+        else: 
+            self.in_possible_words_buffer.append(0)
+        
+        # Add penalty for guessing a word that was already guessed that game
+        if guess in self.guesses: 
+            reward -= 10
+
+        # Update state
+        self.state = np.array([1 if word in new_possible_words else 0 for word in self.valid_words], dtype=int)
+        assert(self.state.shape == self.observation_space.shape), f'{self.state.shape}'
+        self.possible_words = new_possible_words
+        self.n_possible_words = len(self.possible_words)
+
+        
+        # Increment guess count 
+        self.guess_count += 1
+        
+        # Check if done
+        done = (win) or (self.guess_count == 6)
+        
+        # Info 
+        info = {'guess_count': self.guess_count, 'won': win}
+        
+        self.win = win
+                
+        return self.state, reward, done, info
+        
+    def reset(self): 
+
+
+        # Win Ratio logging
+        self.victory_buffer.append(self.win)
+        self.num_games += 1
+        if not self.num_games % self.logging_freq:
+            logs = {"win ratio": self._compute_win_ratio()}
+            self.do_logging(logs, self.num_games)
+            # Print in possible words 
+            print('Percent of Guesses in Possible Words: ', np.round(np.mean(self.in_possible_words_buffer), 4))
+
+       
+        # Reset possible words = all valid words
+        self.possible_words = self.valid_words
+        self.patterns = ['[abcdefghijklmnopqrstuvwxyz]']*5
+        self.all_greens = set()
+        self.all_yellows = set()
+        self.all_grays = set()
+        self.guesses = []
+
+        
+        # Reset alphabet, state and guess count
+        self.alphabet = list('abcdefghijklmnopqrstuvwxyz')
+        self.state = np.ones(len(self.valid_words), dtype = int)
+        self.guess_count = 0
+
+        # Reset answer 
+        if not self.keep_answer_on_reset:
+            self.answer = np.random.choice(self.valid_words)
+        
+        
+        return self.state
+ 
+    def _compute_win_ratio(self):
+        """
+        Computes the win ration of games currently in the victory buffer.
+        :return: the win ratio
+        """
+        wins = sum(self.victory_buffer)
+        return wins/len(self.victory_buffer)
+
+    def do_logging(self, logs, num_games):
+        """
+        :param logs: dictionary containing values to be logged
+        :param num_games: the number of games
+        :return: logs values to tensorboard
+        """
+        print(f"Number of Games: {num_games}")
+        print(f"State: \n {self.state}")
+        print(f"Possible Words: \n {self.possible_words}")
+        print(f"Answer: \n {self.answer}")
+        for key, value in logs.items():
+            print('{} : {}'.format(key, value))
+            self.logger.log_scalar(value, key, num_games)
+        print("\n")
+
+# class WordleSimple(gym.Env): 
+    
+#     def __init__(self, 
+#                  n_letters: int = 5, 
+#                  n_guesses: int = 6, 
+#                  answer: str = None, 
+#                  valid_words: list = None, 
+#                  keep_answer_on_reset: bool = False, 
+#                  logdir: str = 'data'): 
+        
+#         # Store attributes 
+#         assert(valid_words is not None), 'Must pass valid words'
+#         self.n_letters = n_letters
+#         self.n_guesses = n_guesses
+#         self.valid_words = valid_words
+#         self.n_valid_words = len(self.valid_words)
+#         self.answer = answer if answer is not None else np.random.choice(self.valid_words)
+#         self.keep_answer_on_reset = keep_answer_on_reset
+        
+#         # Action + Observation Space
+#         self.action_space = gym.spaces.Discrete(self.n_valid_words)
+#         self.observation_space = gym.spaces.Box(low = 0, 
+#                                                 high = 1, 
+#                                                 shape = (self.n_valid_words,), 
+#                                                 dtype = int)
+
+#         #  self.observation_space = gym.spaces.MultiDiscrete([2] * self.n_valid_words)
+        
+#         # Init Stuff 
+#         self.state = np.ones(len(self.valid_words), dtype = int)
+#         self.guess_count = 0
+#         self.alphabet = list('abcdefghijklmnopqrstuvwxyz')
+#         self.possible_words = self.valid_words
+#         self.n_possible_words = len(self.possible_words)
+        
+#         # Logging
+#         self.logging_freq = 500
+#         self.num_games = 0
+#         self.victory_buffer = deque(maxlen = self.logging_freq)
+#         self.win = False
+#         self.logger = Logger(logdir)
+        
+#     def _compute_reward(self, guess): 
+    
+        
+#         # Init structures to check which letters are green and which are yellow
+#         greens = dict(zip(range(self.n_letters), ['']*self.n_letters))
+#         yellows = defaultdict(list)
+#         grays = []
+        
+#         # Get which words are which
+#         for idx, (guess_letter, answer_letter) in enumerate(zip(guess, self.answer)): 
+            
+#             if guess_letter == answer_letter: 
+#                 greens.update({idx: guess_letter})
+#             elif guess_letter in self.answer: 
+#                 yellows[idx].append(guess_letter)
+#             else: 
+#                 grays.append(guess_letter)
+                
+#         # Remove gray letters from the alphabet
+#         sorted(set(self.alphabet) - set(grays))
+        
+#         # Create new pattern
+#         pattern = r''
+#         for i in range(self.n_letters):
+
+#             # Check if there is green or yellow
+#             is_green = greens[i] != ''
+#             has_yellow = len(yellows[i])  > 0
+
+#             if is_green:
+#                 # if green then it should just be that letter as the only option
+#                 letter_pattern = '[' + greens[i] + ']'
+
+#             elif has_yellow:
+
+#                 # if yellow then it's the alphabet minus the letters that can't be there
+#                 letter_alphabet = [letter for letter in self.alphabet if letter not in yellows[i]]
+#                 letter_pattern = '[' + ''.join(letter_alphabet) + ']'
+
+#             else:
+#                 # otherwise just the remaining alphabet
+#                 letter_pattern = '[' + ''.join(self.alphabet) + ']'
+
+#             pattern += letter_pattern
+
+#         # Filter possible words 
+#         new_possible_words = [word for word in self.possible_words if bool(re.match(pattern, word))]
+
+
+#         # Compute reward
+#         reward = (len(self.possible_words) - len(new_possible_words))/len(self.possible_words)
+        
+#         # Check if won 
+#         won = bool(guess == self.answer)
+
+            
+#         return reward, won, new_possible_words
+                
+#     def step(self, action): 
+        
+#         # Grab decoded word 
+#         guess = self.valid_words[action]
+        
+#         # Compute reward
+#         reward, win, new_possible_words = self._compute_reward(guess)
+        
+#         # Add win/loss penalty
+#         if win: 
+#             reward += 1
+#         else: 
+#             reward -= 1
+        
+#         # Add possible word penalty 
+#         if guess not in self.possible_words: 
+#             reward -= 1
+        
+#         # Update state
+#         self.state = np.array([1 if word in new_possible_words else 0 for word in self.valid_words], dtype=int)
+#         assert(self.state.shape == self.observation_space.shape), f'{self.state.shape}'
+#         self.possible_words = new_possible_words
+#         self.n_possible_words = len(self.possible_words)
+
+        
+#         # Increment guess count 
+#         self.guess_count += 1
+        
+#         # Check if done
+#         done = (win) or (self.guess_count == self.n_guesses)
+        
+#         # Info 
+#         info = {'guess_count': self.guess_count, 'won': win}
+        
+#         self.win = win
+                
+#         return self.state, reward, done, info
+        
+#     def reset(self): 
+
+#         # Win Ratio logging
+#         self.victory_buffer.append(self.win)
+#         self.num_games += 1
+#         if not self.num_games % self.logging_freq:
+#             logs = {
+#                 "win ratio": self._compute_win_ratio()
+#             }
+#             self.do_logging(logs, self.num_games)
+    
+       
+#         # Reset possible words = all valid words
+#         self.possible_words = self.valid_words
+        
+#         # Reset alphabet, state and guess count
+#         self.alphabet = list('abcdefghijklmnopqrstuvwxyz')
+#         self.state = np.ones(len(self.valid_words), dtype = int)
+#         self.guess_count = 0
+
+#         # Reset answer 
+#         if not self.keep_answer_on_reset:
+#             self.answer = np.random.choice(self.valid_words)
+        
+        
+#         return self.state
+ 
+#     def _compute_win_ratio(self):
+#         """
+#         Computes the win ration of games currently in the victory buffer.
+#         :return: the win ratio
+#         """
+#         wins = sum(self.victory_buffer)
+#         return wins/len(self.victory_buffer)
+
+#     def do_logging(self, logs, num_games):
+#         """
+#         :param logs: dictionary containing values to be logged
+#         :param num_games: the number of games
+#         :return: logs values to tensorboard
+#         """
+#         print(f"Number of Games: {num_games}")
+#         print(f"State: \n {self.state}")
+#         print(f"Possible Words: \n {self.possible_words}")
+#         print(f"Answer: \n {self.answer}")
+#         for key, value in logs.items():
+#             print('{} : {}'.format(key, value))
+#             self.logger.log_scalar(value, key, num_games)
+#         print("\n")
+

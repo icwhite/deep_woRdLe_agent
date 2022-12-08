@@ -286,17 +286,17 @@ class WordleSmall(gym.Env):
         reward = (len(self.possible_words) - len(new_possible_words)) / len(self.possible_words)
 
         # Penalty if guess not in possible words
-        # if decoded_guess not in self.possible_words:
-        #     reward = reward - 100
+        if decoded_guess not in self.possible_words:
+            reward = reward - 1
 
         # print(f'Reduced words from {len(self.possible_words)} to {len(new_possible_words)}')
         self.possible_words = new_possible_words
 
         # Check if the board won
         if decoded_guess == decoded_answer:
-            reward += 10
-        # if decoded_guess != decoded_answer:
-        #     reward = reward - 10
+            reward += 1
+        if decoded_guess != decoded_answer: # and (self.guess_count == self.n_guesses):
+            reward = reward - 1
 
         return reward
 
