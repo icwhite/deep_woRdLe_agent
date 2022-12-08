@@ -688,15 +688,12 @@ class WordleSimple(gym.Env):
         reward, win = self._compute_reward(guess, new_possible_words)
 
         ### TRY GIVING THIS REWARD INSTEAD ###
-        reward = 1 if guess in self.possible_words else -1 * self.guess_count
+        reward = 1 if guess in self.possible_words else -1
         if reward == 1: 
             self.in_possible_words_buffer.append(1)
         else: 
             self.in_possible_words_buffer.append(0)
         
-        # Add penalty for guessing a word that was already guessed that game
-        if guess in self.guesses: 
-            reward -= 10
 
         # Update state
         self.state = np.array([1 if word in new_possible_words else 0 for word in self.valid_words], dtype=int)
