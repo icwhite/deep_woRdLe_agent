@@ -708,8 +708,7 @@ class WordleSimple(gym.Env):
         self.guess_count = 0
 
         # Reset answer 
-        if not self.keep_answer_on_reset:
-            self.answer = np.random.choice(self.valid_words)
+        self.answer = np.random.choice(self.valid_words)
         
         
         return self.state
