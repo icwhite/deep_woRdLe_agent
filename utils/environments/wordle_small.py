@@ -219,7 +219,7 @@ class WordleSmall(gym.Env):
         # Check if won board
         won = (decoded_guess == decoded_answer)
         if not won:
-            score -= 10
+            score -= 1
 
         return score
 
